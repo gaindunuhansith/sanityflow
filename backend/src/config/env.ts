@@ -14,6 +14,7 @@ const envSchema = z.object({
     GROQ_API_KEY: z.string().min(1),
     EMAIL_API_KEY: z.string().min(1),
     OPENWEATHER_API_KEY: z.string().min(1),
+    ALERT_EMAIL: z.string().email(),
 })
 
 const parseEnv = () => {

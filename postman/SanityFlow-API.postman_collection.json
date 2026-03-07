@@ -1,0 +1,441 @@
+{
+  "info": {
+    "_postman_id": "sanityflow-api-collection-v1",
+    "name": "SanityFlow API",
+    "description": "Postman collection for SanityFlow API — Auth, Resources, Suppliers, Inventory Transactions, and Barcode Lookup.\n\nHow to use:\n1. Set the `baseUrl` variable to your server (default: http://localhost:3000).\n2. Run **Register** once to create your account, then run **Login** — the JWT token is saved automatically to the `token` variable.\n3. All protected routes use `{{token}}` automatically via the collection-level Auth header.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resourceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "supplierId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transactionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "barcodeValue",
+      "value": "3017620422003",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    console.log('Registration successful. Run Login to get your token.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@sanityflow12.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Register a new user account. Only needs to be run once. After registering, use the Login request to get your JWT token."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const token = json.token || (json.data && json.data.token);",
+                  "    if (token) {",
+                  "        pm.collectionVariables.set('token', token);",
+                  "        console.log('Token saved:', token);",
+                  "    } else {",
+                  "        console.warn('Token not found in response. Check the response structure.');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@sanityflow12.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login to get a JWT token. The token is automatically saved to the `token` collection variable after a successful response."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resources",
+      "item": [
+        {
+          "name": "Create Resource",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    const id = json._id || (json.data && json.data._id);",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('resourceId', id);",
+                  "        console.log('resourceId saved:', id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Water Pump\",\n  \"category\": \"Equipment\",\n  \"quantity\": 10,\n  \"unit\": \"pieces\",\n  \"reorderLevel\": 2,\n  \"supplier\": \"{{supplierId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/resources",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "resources"]
+            },
+            "description": "Create a new resource. The created resource's `_id` is saved to `resourceId` automatically."
+          }
+        },
+        {
+          "name": "Get All Resources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/resources",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "resources"]
+            },
+            "description": "Retrieve all resources."
+          }
+        },
+        {
+          "name": "Get Resource By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/resources/{{resourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "resources", "{{resourceId}}"]
+            },
+            "description": "Retrieve a single resource by ID. Uses the `resourceId` variable saved from Create Resource."
+          }
+        },
+        {
+          "name": "Update Resource",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 25,\n  \"reorderLevel\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/resources/{{resourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "resources", "{{resourceId}}"]
+            },
+            "description": "Update a resource by ID."
+          }
+        },
+        {
+          "name": "Delete Resource",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/resources/{{resourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "resources", "{{resourceId}}"]
+            },
+            "description": "Delete a resource by ID. Returns 204 No Content on success."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Suppliers",
+      "item": [
+        {
+          "name": "Create Supplier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    const id = json._id || (json.data && json.data._id);",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('supplierId', id);",
+                  "        console.log('supplierId saved:', id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AquaSupply Co.\",\n  \"contact\": {\n    \"email\": \"contact@aquasupply.com\",\n    \"phone\": \"0712345678\",\n    \"address\": \"123 Main St, Colombo\"\n  },\n  \"productsSupplied\": [],\n  \"reliabilityRating\": 4.5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suppliers"]
+            },
+            "description": "Create a new supplier. The created supplier's `_id` is saved to `supplierId` automatically."
+          }
+        },
+        {
+          "name": "Get All Suppliers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suppliers"]
+            },
+            "description": "Retrieve all suppliers."
+          }
+        },
+        {
+          "name": "Get Supplier By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suppliers", "{{supplierId}}"]
+            },
+            "description": "Retrieve a single supplier by ID. Uses the `supplierId` variable saved from Create Supplier."
+          }
+        },
+        {
+          "name": "Update Supplier",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contact\": {\n    \"email\": \"new@aquasupply.com\",\n    \"phone\": \"0799999999\"\n  },\n  \"reliabilityRating\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suppliers", "{{supplierId}}"]
+            },
+            "description": "Update a supplier by ID."
+          }
+        },
+        {
+          "name": "Delete Supplier",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suppliers", "{{supplierId}}"]
+            },
+            "description": "Delete a supplier by ID. Returns 204 No Content on success."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory Transactions",
+      "item": [
+        {
+          "name": "Create Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    const id = json._id || (json.data && json.data._id);",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('transactionId', id);",
+                  "        console.log('transactionId saved:', id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product\": \"{{resourceId}}\",\n  \"type\": \"ADD\",\n  \"quantity\": 5,\n  \"reason\": \"Stock replenishment\",\n  \"date\": \"2026-03-07T00:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory-transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory-transactions"]
+            },
+            "description": "Create a new inventory transaction. Requires an authenticated user — the user ID is resolved from the JWT token on the server side.\n\nTransaction types: `ADD`, `REMOVE`, `TRANSFER`.\n\nThe created transaction `_id` is saved to `transactionId` automatically."
+          }
+        },
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory-transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory-transactions"]
+            },
+            "description": "Retrieve all inventory transactions."
+          }
+        },
+        {
+          "name": "Get Transaction By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory-transactions/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventory-transactions", "{{transactionId}}"]
+            },
+            "description": "Retrieve a single transaction by ID. Uses the `transactionId` variable saved from Create Transaction."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Barcode",
+      "item": [
+        {
+          "name": "Lookup Barcode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/barcode/{{barcodeValue}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "barcode", "{{barcodeValue}}"]
+            },
+            "description": "Look up a product by barcode using the Open Food Facts external API.\n\nThe barcode must be between 8 and 20 characters long.\n\nExample barcodes to try:\n- `3017620422003` (Nutella)\n- `5000112548167` (Coca-Cola)\n- `0737628064502` (random product)\n\nSet the `barcodeValue` collection variable or replace it inline in the URL."
+          }
+        }
+      ]
+    }
+  ]
+}

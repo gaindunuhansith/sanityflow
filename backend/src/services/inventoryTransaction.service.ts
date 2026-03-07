@@ -1,6 +1,8 @@
 import { InventoryTransaction } from "../models/inventoryTransaction.model.js";
 import type { IInventoryTransaction } from "../types/inventoryTransaction.type.js";
 import { Resource } from "../models/resource.model.js";
+import { sendLowStockAlertEmail } from "./email.service.js";
+import type { ISupplier } from "../types/supplier.type.js";
 
 export const createTransaction = async (
   data: Partial<IInventoryTransaction>
@@ -28,6 +30,19 @@ export const createTransaction = async (
   }
 
   await resource.save();
+
+  // Check for low stock after quantity change
+  if (resource.quantity <= resource.reorderLevel) {
+    const populated = await resource.populate<{ supplier: ISupplier }>("supplier");
+    await sendLowStockAlertEmail({
+      resourceName: resource.name,
+      category: resource.category,
+      quantity: resource.quantity,
+      reorderLevel: resource.reorderLevel,
+      unit: resource.unit,
+      supplierName: populated.supplier?.name ?? "Unknown Supplier",
+    });
+  }
 
   const transaction = await InventoryTransaction.create(data);
 

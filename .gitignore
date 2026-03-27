@@ -26,4 +26,4 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
-SanityFlow.postman_collection.json
+

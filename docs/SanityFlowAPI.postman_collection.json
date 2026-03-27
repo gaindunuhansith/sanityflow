@@ -1,0 +1,1145 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "SanityFlow API",
+    "description": "Complete API documentation for SanityFlow — covers authentication, water management, issues, distributions, beneficiaries, drivers, resources, suppliers, inventory, barcode lookup, blog, forum, and AI endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "authToken", "value": "", "type": "string", "description": "JWT token from /auth/login (regular user)" },
+    { "key": "adminToken", "value": "", "type": "string", "description": "JWT token from admin login" },
+    { "key": "driverToken", "value": "", "type": "string", "description": "JWT token from driver login" },
+    { "key": "issueId", "value": "REPLACE_WITH_ISSUE_ID", "type": "string" },
+    { "key": "waterSourceId", "value": "REPLACE_WITH_WATER_SOURCE_ID", "type": "string" },
+    { "key": "waterTestId", "value": "REPLACE_WITH_WATER_TEST_ID", "type": "string" },
+    { "key": "distributionId", "value": "REPLACE_WITH_DISTRIBUTION_ID", "type": "string" },
+    { "key": "beneficiaryId", "value": "REPLACE_WITH_BENEFICIARY_ID", "type": "string" },
+    { "key": "blogPostId", "value": "REPLACE_WITH_BLOG_POST_ID", "type": "string" },
+    { "key": "threadId", "value": "", "type": "string" },
+    { "key": "replyId", "value": "REPLACE_WITH_REPLY_ID", "type": "string" },
+    { "key": "driverId", "value": "REPLACE_WITH_DRIVER_ID", "type": "string" },
+    { "key": "resourceId", "value": "REPLACE_WITH_RESOURCE_ID", "type": "string" },
+    { "key": "supplierId", "value": "REPLACE_WITH_SUPPLIER_ID", "type": "string" },
+    { "key": "transactionId", "value": "REPLACE_WITH_TRANSACTION_ID", "type": "string" },
+    { "key": "barcode", "value": "0123456789012", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register (User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('authToken', json.token); }",
+                  "if (json.data && json.data.token) { pm.collectionVariables.set('authToken', json.data.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alex Rivera\",\n  \"email\": \"alex.rivera@sanityflow.io\",\n  \"password\": \"Sanity@2026!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Register a new regular (member) user account. Requires name (min 2 chars), a valid email, and password (min 8 chars). The role defaults to 'member'. The test script automatically saves the returned JWT to {{authToken}}."
+          }
+        },
+        {
+          "name": "Register (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('adminToken', json.token); }",
+                  "if (json.data && json.data.token) { pm.collectionVariables.set('adminToken', json.data.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SanityFlow Admin\",\n  \"email\": \"admin@sanityflow.io\",\n  \"password\": \"Admin@Sanity2026!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Register the admin user account. After registration, the role must be manually updated to 'admin' in the database (the register endpoint always creates accounts with role 'member'). The test script automatically saves the returned JWT to {{adminToken}}."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('authToken', json.token); }",
+                  "if (json.data && json.data.token) { pm.collectionVariables.set('authToken', json.data.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alex.rivera@sanityflow.io\",\n  \"password\": \"Sanity@2026!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Login with email and password. The test script automatically saves the returned JWT to {{authToken}}."
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('adminToken', json.token); }",
+                  "if (json.data && json.data.token) { pm.collectionVariables.set('adminToken', json.data.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@sanityflow.io\",\n  \"password\": \"Admin@Sanity2026!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Login as an admin user. Saves the token to {{adminToken}}."
+          }
+        },
+        {
+          "name": "Login (Driver)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('driverToken', json.token); }",
+                  "if (json.data && json.data.token) { pm.collectionVariables.set('driverToken', json.data.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"samuel.kwesi@sanityflow.io\",\n  \"password\": \"Driver@Sanity2026!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Login as a driver user. Saves the token to {{driverToken}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issues",
+      "description": "Issue tracking for water-related problems. All routes require authentication. Update and Delete require the admin role.",
+      "item": [
+        {
+          "name": "Get All Issues",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/issues", "host": ["{{baseUrl}}"], "path": ["api", "v1", "issues"] },
+            "description": "Retrieve all reported issues. Requires authentication."
+          }
+        },
+        {
+          "name": "Get Issue by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/issues/{{issueId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "issues", "{{issueId}}"] },
+            "description": "Retrieve a single issue by its ID."
+          }
+        },
+        {
+          "name": "Create Issue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('issueId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/issues", "host": ["{{baseUrl}}"], "path": ["api", "v1", "issues"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueType\": \"Water Quality\",\n  \"description\": \"Water has a foul smell and is discoloured.\",\n  \"location\": \"Zone A, Block 3\",\n  \"photo\": \"https://example.com/photos/issue1.jpg\",\n  \"priority\": \"High\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Report a new issue. issueType: 'Water Quality' | 'Water Shortage' | 'Infrastructure' | 'Other'. priority: 'Low' | 'Medium' | 'High'."
+          }
+        },
+        {
+          "name": "Update Issue (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/issues/{{issueId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "issues", "{{issueId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"In Progress\",\n  \"assignedTo\": \"REPLACE_WITH_USER_ID\",\n  \"resolutionNotes\": \"Team dispatched to investigate.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update an issue (admin only). status: 'Pending' | 'In Progress' | 'Resolved'."
+          }
+        },
+        {
+          "name": "Delete Issue (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/issues/{{issueId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "issues", "{{issueId}}"] },
+            "description": "Permanently delete an issue (admin only)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Water Sources",
+      "description": "Manage water source infrastructure. All routes require authentication. Create, Update, and Delete require the admin role.",
+      "item": [
+        {
+          "name": "Get All Water Sources",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources"] },
+            "description": "Retrieve all water sources."
+          }
+        },
+        {
+          "name": "Get Water Source by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources/{{waterSourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources", "{{waterSourceId}}"] },
+            "description": "Retrieve a single water source by its ID."
+          }
+        },
+        {
+          "name": "Create Water Source (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('waterSourceId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Borehole\",\n  \"type\": \"borehole\",\n  \"location\": \"North District\",\n  \"capacity\": 50000,\n  \"condition\": \"Good\",\n  \"isActive\": true,\n  \"notes\": \"Primary supply source for Zone A\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Create a new water source (admin only). type: 'well' | 'tap' | 'borehole'. condition: 'Good' | 'Fair' | 'Poor'."
+          }
+        },
+        {
+          "name": "Update Water Source (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources/{{waterSourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources", "{{waterSourceId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"Fair\",\n  \"isActive\": true,\n  \"notes\": \"Routine maintenance scheduled.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update a water source (admin only)."
+          }
+        },
+        {
+          "name": "Delete Water Source (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources/{{waterSourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources", "{{waterSourceId}}"] },
+            "description": "Delete a water source (admin only)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Water Quality Tests",
+      "description": "Create and manage water quality test results. All routes require authentication. Create, Update, and Delete require admin.",
+      "item": [
+        {
+          "name": "Get All Water Tests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-tests", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-tests"] },
+            "description": "Retrieve all water quality test records."
+          }
+        },
+        {
+          "name": "Get Water Test Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-tests/analytics", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-tests", "analytics"] },
+            "description": "Retrieve aggregated analytics for water quality tests."
+          }
+        },
+        {
+          "name": "Get Water Test by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-tests/{{waterTestId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-tests", "{{waterTestId}}"] },
+            "description": "Retrieve a single water quality test record by ID."
+          }
+        },
+        {
+          "name": "Create Water Test (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('waterTestId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-tests", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-tests"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"waterSource\": \"{{waterSourceId}}\",\n  \"testDate\": \"2026-03-07T09:00:00.000Z\",\n  \"pH\": 7.2,\n  \"tds\": 350,\n  \"turbidity\": 1.5,\n  \"contaminants\": [],\n  \"status\": \"Safe\",\n  \"tester\": \"REPLACE_WITH_USER_ID\",\n  \"notes\": \"Monthly routine test.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Log a new water quality test result (admin only). status: 'Safe' | 'Unsafe'. pH must be between 0–14."
+          }
+        },
+        {
+          "name": "Update Water Test (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-tests/{{waterTestId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-tests", "{{waterTestId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Unsafe\",\n  \"contaminants\": [\"Lead\", \"Coliform\"],\n  \"notes\": \"Retest required after treatment.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update a water quality test record (admin only)."
+          }
+        },
+        {
+          "name": "Delete Water Test (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-tests/{{waterTestId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-tests", "{{waterTestId}}"] },
+            "description": "Delete a water quality test record (admin only)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Distribution Orders",
+      "description": "Manage water/resource distribution orders. Admins manage orders; drivers can view and update delivery status.",
+      "item": [
+        {
+          "name": "Get All Distribution Orders (Admin/Driver)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/distributions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "distributions"] },
+            "description": "Retrieve all distribution orders. Requires admin or driver role."
+          }
+        },
+        {
+          "name": "Get Distribution Order by ID (Admin/Driver)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/distributions/{{distributionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "distributions", "{{distributionId}}"] },
+            "description": "Retrieve a single distribution order by ID. Requires admin or driver role."
+          }
+        },
+        {
+          "name": "Create Distribution Order (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('distributionId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/distributions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "distributions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resource\": \"{{resourceId}}\",\n  \"quantity\": 500,\n  \"targetLocation\": \"South District, Block 5\",\n  \"notes\": \"Priority delivery for flood-affected families.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Create a new distribution order (admin only). resource must be a valid MongoDB ObjectId."
+          }
+        },
+        {
+          "name": "Update Distribution Order (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/distributions/{{distributionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "distributions", "{{distributionId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"driver\": \"{{driverId}}\",\n  \"notes\": \"Assigned driver for delivery.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update a distribution order — assign a driver or update notes (admin only)."
+          }
+        },
+        {
+          "name": "Update Delivery Status (Driver)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/distributions/{{distributionId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "v1", "distributions", "{{distributionId}}", "status"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"In Transit\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update the delivery status of an order (driver only). status: 'In Transit' | 'Delivered' | 'Failed'."
+          }
+        },
+        {
+          "name": "Delete Distribution Order (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/distributions/{{distributionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "distributions", "{{distributionId}}"] },
+            "description": "Delete a distribution order (admin only)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Beneficiaries",
+      "description": "Manage beneficiary records. No authentication required on these routes.",
+      "item": [
+        {
+          "name": "Get All Beneficiaries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/beneficiaries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "beneficiaries"] },
+            "description": "Retrieve all beneficiary records."
+          }
+        },
+        {
+          "name": "Get Beneficiary by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/beneficiaries/{{beneficiaryId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "beneficiaries", "{{beneficiaryId}}"] },
+            "description": "Retrieve a single beneficiary by their ID."
+          }
+        },
+        {
+          "name": "Create Beneficiary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('beneficiaryId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/beneficiaries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "beneficiaries"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Amara Diallo\",\n  \"location\": \"Village A, North Region\",\n  \"familySize\": 5,\n  \"contact\": \"+1234567890\",\n  \"eligibilityStatus\": \"Active\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Register a new beneficiary. eligibilityStatus: 'Active' | 'Inactive'. familySize must be >= 1."
+          }
+        },
+        {
+          "name": "Update Beneficiary",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/beneficiaries/{{beneficiaryId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "beneficiaries", "{{beneficiaryId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"familySize\": 6,\n  \"eligibilityStatus\": \"Active\",\n  \"contact\": \"+0987654321\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update beneficiary details. All fields are optional."
+          }
+        },
+        {
+          "name": "Delete Beneficiary",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/beneficiaries/{{beneficiaryId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "beneficiaries", "{{beneficiaryId}}"] },
+            "description": "Delete a beneficiary record."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blog",
+      "description": "Blog post management. Reading is public. Creating, updating, and deleting require admin authentication.",
+      "item": [
+        {
+          "name": "Get All Blog Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog?page=1&limit=10&status=Published",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blog"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "Published", "description": "'Draft' | 'Published'" },
+                { "key": "tag", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Retrieve paginated blog posts. Supports filtering by status, tag, and full-text search."
+          }
+        },
+        {
+          "name": "Get Blog Post by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/blog/{{blogPostId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "blog", "{{blogPostId}}"] },
+            "description": "Retrieve a single blog post by its ID."
+          }
+        },
+        {
+          "name": "Create Blog Post (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('blogPostId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/blog", "host": ["{{baseUrl}}"], "path": ["api", "v1", "blog"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"The Importance of Clean Water Access\",\n  \"summary\": \"An overview of the global water crisis and community-driven solutions.\",\n  \"content\": \"Water is a fundamental human right. In many regions, access to clean water remains a daily struggle...\",\n  \"coverImage\": \"https://example.com/images/water-blog.jpg\",\n  \"tags\": [\"water\", \"health\", \"community\"],\n  \"status\": \"Published\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Create a new blog post (admin only). status: 'Draft' | 'Published'. title max 200 chars, summary max 500 chars."
+          }
+        },
+        {
+          "name": "Update Blog Post (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/blog/{{blogPostId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "blog", "{{blogPostId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Published\",\n  \"tags\": [\"water\", \"health\", \"community\", \"sustainability\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Partially update a blog post (admin only). All fields are optional."
+          }
+        },
+        {
+          "name": "Delete Blog Post (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/blog/{{blogPostId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "blog", "{{blogPostId}}"] },
+            "description": "Delete a blog post (admin only)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Forum",
+      "description": "Community forum with threads and replies. Reading is public. Posting requires authentication. Deleting a thread requires being the thread author.",
+      "item": [
+        {
+          "name": "Get All Threads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/community/forum?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "community", "forum"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "Open", "description": "'Open' | 'Closed'", "disabled": true },
+                { "key": "tag", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Retrieve paginated forum threads. Supports filtering by status, tag, and search."
+          }
+        },
+        {
+          "name": "Get Thread by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/community/forum/{{threadId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "community", "forum", "{{threadId}}"] },
+            "description": "Retrieve a single forum thread by ID."
+          }
+        },
+        {
+          "name": "Create Thread (Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('threadId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/community/forum", "host": ["{{baseUrl}}"], "path": ["api", "v1", "community", "forum"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"How can we reduce water wastage at home?\",\n  \"content\": \"I have been thinking about simple habits that can help conserve water. Would love to hear community ideas.\",\n  \"tags\": [\"conservation\", \"tips\"],\n  \"status\": \"Open\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Create a new forum thread. Requires authentication. status: 'Open' | 'Closed'."
+          }
+        },
+        {
+          "name": "Update Thread (Auth)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/community/forum/{{threadId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "community", "forum", "{{threadId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Closed\",\n  \"title\": \"How can we reduce water wastage at home? [RESOLVED]\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update a forum thread. Requires authentication (typically the thread owner or admin)."
+          }
+        },
+        {
+          "name": "Delete Thread (Owner)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/community/forum/{{threadId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "community", "forum", "{{threadId}}"] },
+            "description": "Delete a forum thread. Only the author of the thread can delete it."
+          }
+        },
+        {
+          "name": "Get Replies for Thread",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/community/forum/{{threadId}}/replies", "host": ["{{baseUrl}}"], "path": ["api", "v1", "community", "forum", "{{threadId}}", "replies"] },
+            "description": "Retrieve all replies for a specific thread."
+          }
+        },
+        {
+          "name": "Create Reply (Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('replyId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/community/forum/{{threadId}}/replies", "host": ["{{baseUrl}}"], "path": ["api", "v1", "community", "forum", "{{threadId}}", "replies"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Great question! Fixing leaky taps and using low-flow showerheads are good starting points.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Post a reply to a forum thread. Requires authentication."
+          }
+        },
+        {
+          "name": "Delete Reply (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/community/forum/{{threadId}}/replies/{{replyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "community", "forum", "{{threadId}}", "replies", "{{replyId}}"] },
+            "description": "Delete a reply from a forum thread (admin only)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Drivers",
+      "description": "Manage delivery drivers. No authentication required on these routes.",
+      "item": [
+        {
+          "name": "Get All Drivers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/drivers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "drivers"] },
+            "description": "Retrieve all driver records."
+          }
+        },
+        {
+          "name": "Get Driver by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/drivers/{{driverId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "drivers", "{{driverId}}"] },
+            "description": "Retrieve a single driver by their ID."
+          }
+        },
+        {
+          "name": "Create Driver",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('driverId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/drivers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "drivers"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Samuel Kwesi\",\n  \"email\": \"samuel.kwesi@sanityflow.io\",\n  \"password\": \"Driver@Sanity2026!\",\n  \"contact\": \"+233201234567\",\n  \"vehicleInfo\": \"Toyota HiLux - GH-1234-22\",\n  \"assignedArea\": \"Northern Region\",\n  \"availability\": \"Active\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Register a new driver. availability: 'Active' | 'Inactive'. Password min 8 chars."
+          }
+        },
+        {
+          "name": "Update Driver",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/drivers/{{driverId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "drivers", "{{driverId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availability\": \"Inactive\",\n  \"assignedArea\": \"Southern Region\",\n  \"vehicleInfo\": \"Ford Ranger - GH-5678-22\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update driver information. All fields are optional."
+          }
+        },
+        {
+          "name": "Delete Driver",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/drivers/{{driverId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "drivers", "{{driverId}}"] },
+            "description": "Delete a driver record."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resources",
+      "description": "Manage inventory resources (water containers, pipes, etc.). All routes require authentication.",
+      "item": [
+        {
+          "name": "Get All Resources",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/resources", "host": ["{{baseUrl}}"], "path": ["api", "v1", "resources"] },
+            "description": "Retrieve all resource records."
+          }
+        },
+        {
+          "name": "Get Resource by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/resources/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "resources", "{{resourceId}}"] },
+            "description": "Retrieve a single resource by its ID."
+          }
+        },
+        {
+          "name": "Create Resource",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('resourceId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/resources", "host": ["{{baseUrl}}"], "path": ["api", "v1", "resources"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"20L Water Jerrycan\",\n  \"category\": \"Container\",\n  \"quantity\": 200,\n  \"unit\": \"pieces\",\n  \"reorderLevel\": 50,\n  \"supplier\": \"{{supplierId}}\",\n  \"barcode\": \"0123456789012\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Create a new resource. supplier must be a valid MongoDB ObjectId."
+          }
+        },
+        {
+          "name": "Update Resource",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/resources/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "resources", "{{resourceId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 150,\n  \"reorderLevel\": 40,\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update a resource record."
+          }
+        },
+        {
+          "name": "Delete Resource",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/resources/{{resourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "resources", "{{resourceId}}"] },
+            "description": "Delete a resource record."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Suppliers",
+      "description": "Manage supplier records. All routes require authentication.",
+      "item": [
+        {
+          "name": "Get All Suppliers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/suppliers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "suppliers"] },
+            "description": "Retrieve all supplier records."
+          }
+        },
+        {
+          "name": "Get Supplier by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "suppliers", "{{supplierId}}"] },
+            "description": "Retrieve a single supplier by ID."
+          }
+        },
+        {
+          "name": "Create Supplier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('supplierId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/suppliers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "suppliers"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AquaSupply Ltd\",\n  \"contact\": {\n    \"email\": \"hello@aquasupply.com\",\n    \"phone\": \"+1-800-555-0199\",\n    \"address\": \"123 Industrial Ave, Accra\"\n  },\n  \"productsSupplied\": [],\n  \"reliabilityRating\": 4.5\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Create a new supplier. reliabilityRating is a numeric score. productsSupplied is an array of resource ObjectIds."
+          }
+        },
+        {
+          "name": "Update Supplier",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "suppliers", "{{supplierId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reliabilityRating\": 4.8,\n  \"contact\": {\n    \"phone\": \"+1-800-555-0200\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Update a supplier record."
+          }
+        },
+        {
+          "name": "Delete Supplier",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "suppliers", "{{supplierId}}"] },
+            "description": "Delete a supplier record."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory Transactions",
+      "description": "Track stock movements (ADD, REMOVE, TRANSFER) for resources. All routes require authentication.",
+      "item": [
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory-transactions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory-transactions"] },
+            "description": "Retrieve all inventory transaction records."
+          }
+        },
+        {
+          "name": "Get Transaction by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory-transactions/{{transactionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory-transactions", "{{transactionId}}"] },
+            "description": "Retrieve a single transaction by its ID."
+          }
+        },
+        {
+          "name": "Create Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json._id || (json.data && json.data._id);",
+                  "if (id) pm.collectionVariables.set('transactionId', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory-transactions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory-transactions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product\": \"{{resourceId}}\",\n  \"type\": \"ADD\",\n  \"quantity\": 50,\n  \"user\": \"REPLACE_WITH_USER_ID\",\n  \"reason\": \"New stock received from AquaSupply Ltd\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Record an inventory transaction. type: 'ADD' | 'REMOVE' | 'TRANSFER'. product and user must be valid MongoDB ObjectIds. quantity >= 1, reason min 3 chars."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Barcode",
+      "description": "Look up a resource by its barcode value. Requires authentication.",
+      "item": [
+        {
+          "name": "Lookup by Barcode",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/barcode/{{barcode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "barcode", "{{barcode}}"]
+            },
+            "description": "Look up a resource record by scanning or providing a barcode string. Set the {{barcode}} variable to the barcode value."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "description": "AI-powered features. Summarize blog posts using an LLM.",
+      "item": [
+        {
+          "name": "Summarize Blog Post",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai/summarize/blog/{{blogPostId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ai", "summarize", "blog", "{{blogPostId}}"]
+            },
+            "description": "Generate an AI summary of a blog post by its ID using the configured LLM (Groq). No authentication required."
+          }
+        }
+      ]
+    }
+  ]
+}

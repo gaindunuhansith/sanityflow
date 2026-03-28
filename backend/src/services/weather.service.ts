@@ -32,7 +32,7 @@ export const fetchWeatherForLocation = async (location: string): Promise<Weather
       logger.warn(`Weather risk at "${location}": ${riskReason}`);
     }
 
-    return { condition, temp_c, humidity, rainfall_last_1h_mm, isHighRisk, riskReason };
+    return { condition, temp_c, humidity, rainfall_last_1h_mm, isHighRisk, ...(riskReason && { riskReason }) };
   } catch (error) {
     logger.warn(`Weather fetch failed for location "${location}": ${(error as Error).message}`);
     return null;

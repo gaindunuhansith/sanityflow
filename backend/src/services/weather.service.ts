@@ -11,7 +11,7 @@ export interface WeatherData {
   riskReason?: string;
 }
 
-const HIGH_RISK_CONDITIONS = ['Thunderstorm', 'Drizzle', 'Rain', 'Snow', 'Squall', 'Tornado'];
+const HIGH_RISK_CONDITIONS = new Set(['Thunderstorm', 'Drizzle', 'Rain', 'Snow', 'Squall', 'Tornado']);
 
 export const fetchWeatherForLocation = async (location: string): Promise<WeatherData | null> => {
   try {
@@ -23,10 +23,16 @@ export const fetchWeatherForLocation = async (location: string): Promise<Weather
     const humidity: number = data.main?.humidity ?? 0;
     const rainfall_last_1h_mm: number = data.rain?.['1h'] ?? 0;
 
-    const isHighRisk = HIGH_RISK_CONDITIONS.includes(condition) || rainfall_last_1h_mm > 10;
-    const riskReason = isHighRisk
-      ? `${condition} detected${rainfall_last_1h_mm > 10 ? ` with ${rainfall_last_1h_mm}mm rainfall in last hour` : ''}`
-      : undefined;
+    const hasHeavyRainfall = rainfall_last_1h_mm > 10;
+    const isHighRisk = HIGH_RISK_CONDITIONS.has(condition) || hasHeavyRainfall;
+
+    let riskReason: string | undefined;
+    if (isHighRisk) {
+      riskReason = `${condition} detected`;
+      if (hasHeavyRainfall) {
+        riskReason += ` with ${rainfall_last_1h_mm}mm rainfall in last hour`;
+      }
+    }
 
     if (isHighRisk) {
       logger.warn(`Weather risk at "${location}": ${riskReason}`);

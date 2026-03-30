@@ -6,8 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Topbar() {
   return (
-    <header className="h-20 shrink-0 border-b border-border/10 bg-background flex items-center justify-between px-6 z-10 sticky top-0">
-      
+    <header className="h-20 shrink-0 border-b border-border bg-card flex items-center justify-between px-6 z-10 sticky top-0 shadow-sm">
+
       <div className="flex items-center gap-4 flex-1">
         {/* Toggle Sidebar for Mobile/Desktop */}
         <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
@@ -15,10 +15,10 @@ export function Topbar() {
         {/* Search Bar */}
         <div className="max-w-xl w-full relative group hidden md:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-          <Input 
-            type="text" 
-            placeholder="Search here..." 
-            className="w-full bg-card border-border/10 rounded-full h-10 pl-10 pr-4 focus-visible:ring-primary/50 shadow-sm"
+          <Input
+            type="text"
+            placeholder="Search here..."
+            className="w-full bg-background border-border rounded-full h-10 pl-10 pr-4 focus-visible:ring-primary/50 shadow-sm"
           />
         </div>
       </div>
@@ -31,7 +31,7 @@ export function Topbar() {
         </Button>
 
         {/* Notifications */}
-        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 border-l border-r border-border/10">
+        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 border-l border-r border-border">
           <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground rounded-full">
             <Mail className="w-5 h-5" />
             <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full"></span>

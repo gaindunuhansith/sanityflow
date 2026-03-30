@@ -12,6 +12,7 @@ const envSchema = z.object({
     FRONTEND_APP_ORIGIN: z.url(),
     BACKEND_APP_ORIGIN: z.url(),
     GROQ_API_KEY: z.string().min(1),
+    BARCODE_API_KEY: z.string().min(1).optional(),
     EMAIL_API_KEY: z.string().min(1),
     OPENWEATHER_API_KEY: z.string().min(1),
     ALERT_EMAIL: z.string().email(),

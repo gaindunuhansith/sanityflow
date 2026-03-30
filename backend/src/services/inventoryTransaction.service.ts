@@ -4,6 +4,27 @@ import { Resource } from "../models/resource.model.js";
 import { sendLowStockAlertEmail } from "./email.service.js";
 import type { ISupplier } from "../types/supplier.type.js";
 
+const notifyLowStock = async (resource: {
+  name: string;
+  category: string;
+  quantity: number;
+  reorderLevel: number;
+  unit: string;
+  supplier: unknown;
+  populate: <T>(path: string) => Promise<T>;
+}) => {
+  const populated = await resource.populate<{ supplier: ISupplier }>("supplier");
+
+  await sendLowStockAlertEmail({
+    resourceName: resource.name,
+    category: resource.category,
+    quantity: resource.quantity,
+    reorderLevel: resource.reorderLevel,
+    unit: resource.unit,
+    supplierName: populated.supplier?.name ?? "Unknown Supplier",
+  });
+};
+
 export const createTransaction = async (
   data: Partial<IInventoryTransaction>
 ) => {
@@ -16,9 +37,10 @@ export const createTransaction = async (
 
   const quantity = data.quantity ?? 0;
 
-  if (data.type === "REMOVE") {
+  if (data.type === "REMOVE" || data.type === "TRANSFER") {
 
     if (resource.quantity < quantity) {
+      await notifyLowStock(resource);
       throw new Error("Not enough stock available");
     }
 
@@ -33,15 +55,7 @@ export const createTransaction = async (
 
   // Check for low stock after quantity change
   if (resource.quantity <= resource.reorderLevel) {
-    const populated = await resource.populate<{ supplier: ISupplier }>("supplier");
-    await sendLowStockAlertEmail({
-      resourceName: resource.name,
-      category: resource.category,
-      quantity: resource.quantity,
-      reorderLevel: resource.reorderLevel,
-      unit: resource.unit,
-      supplierName: populated.supplier?.name ?? "Unknown Supplier",
-    });
+    await notifyLowStock(resource);
   }
 
   const transaction = await InventoryTransaction.create(data);

@@ -3,12 +3,20 @@ import * as service from "../services/inventoryTransaction.service.js";
 import { HTTP_STATUS } from "../constants/index.js";
 
 export const createTransaction = async (req: Request, res: Response) => {
-  const transaction = await service.createTransaction({
-    ...req.body,
-    user: req.user.userId,
-  });
+  try {
+    const transaction = await service.createTransaction({
+      ...req.body,
+      user: req.user.userId,
+    });
 
-  res.status(HTTP_STATUS.CREATED).json(transaction);
+    res.status(HTTP_STATUS.CREATED).json(transaction);
+
+  } catch (error: any) {
+    res.status(HTTP_STATUS.BAD_REQUEST).json({
+      error: error.message,
+    });
+
+  }
 };
 
 export const getAllTransactions = async (_req: Request, res: Response) => {

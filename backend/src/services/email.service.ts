@@ -40,6 +40,23 @@ const statusUpdateTemplate = (orderId: string, targetLocation: string, status: s
   `,
 });
 
+const lowStockAlertTemplate = (resourceName: string, category: string, quantity: number, reorderLevel: number, unit: string, supplierName: string) => ({
+  subject: `⚠️ Low Stock Alert — ${resourceName}`,
+  html: `
+    <h2>Low Stock Alert</h2>
+    <p>The following resource has fallen below its reorder level and requires immediate attention.</p>
+    <table style="border-collapse:collapse;width:100%">
+      <tr><td style="padding:8px;border:1px solid #ddd"><strong>Resource</strong></td><td style="padding:8px;border:1px solid #ddd">${resourceName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd"><strong>Category</strong></td><td style="padding:8px;border:1px solid #ddd">${category}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd"><strong>Current Quantity</strong></td><td style="padding:8px;border:1px solid #ddd;color:red"><strong>${quantity} ${unit}</strong></td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd"><strong>Reorder Level</strong></td><td style="padding:8px;border:1px solid #ddd">${reorderLevel} ${unit}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ddd"><strong>Supplier</strong></td><td style="padding:8px;border:1px solid #ddd">${supplierName}</td></tr>
+    </table>
+    <p>Please reorder stock as soon as possible to avoid shortages.</p>
+    <br/><p>— SanityFlow Team</p>
+  `,
+});
+
 // --- Public API ---
 
 export const sendOrderAssignedEmail = async (opts: {
@@ -70,5 +87,29 @@ export const sendStatusUpdateEmail = async (opts: {
     Logger.info(`Status update email (${opts.status}) sent to ${opts.recipientEmail}`);
   } catch (err) {
     Logger.error(`Failed to send status update email: ${err}`);
+  }
+};
+
+export const sendLowStockAlertEmail = async (opts: {
+  resourceName: string;
+  category: string;
+  quantity: number;
+  reorderLevel: number;
+  unit: string;
+  supplierName: string;
+}) => {
+  const { subject, html } = lowStockAlertTemplate(
+    opts.resourceName,
+    opts.category,
+    opts.quantity,
+    opts.reorderLevel,
+    opts.unit,
+    opts.supplierName,
+  );
+  try {
+    await resend.emails.send({ from: FROM, to: env.ALERT_EMAIL, subject, html });
+    Logger.warn(`Low stock alert sent for "${opts.resourceName}" (qty: ${opts.quantity}, reorder level: ${opts.reorderLevel})`);
+  } catch (err) {
+    Logger.error(`Failed to send low stock alert email: ${err}`);
   }
 };

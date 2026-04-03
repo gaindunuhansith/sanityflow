@@ -1,24 +1,18 @@
 import { Outlet } from "react-router-dom";
-import { AppSidebar } from "./Sidebar";
-import { Topbar } from "./Topbar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Sidebar } from "./Sidebar";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 
 export function DashboardLayout() {
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
-        {/* Shadcn Sidebar */}
-        <AppSidebar />
-
-        <SidebarInset className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
-          {/* Topbar with SidebarTrigger */}
-          <Topbar />
-          
-          {/* Scrollable Dashboard Content */}
-          <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
-            <div className="mx-auto max-w-7xl h-full">
-              <Outlet />
-            </div>
+      <div className="flex min-h-screen bg-gray-50/50 text-foreground w-full">
+        <Sidebar />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center justify-between border-b px-6">
+            <SidebarTrigger />
+          </header>
+          <main className="flex-1 flex-col p-6 overflow-auto">
+            <Outlet />
           </main>
         </SidebarInset>
       </div>

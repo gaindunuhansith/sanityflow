@@ -1,18 +1,21 @@
 import { Link, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Truck, 
-  Users, 
-  Box,
-  Droplet,
-  LogOut,
-  Settings,
-  HeartPulse
-} from "lucide-react";
 import {
-  Sidebar,
+  ChevronDown,
+  HelpCircle,
+  Home,
+  Feather,
+  MessageSquare,
+  Users,
+  Truck,
+  Package,
+  Droplets,
+  CloudSun,
+  Settings
+} from "lucide-react";
+
+import {
+  Sidebar as ShadcnSidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -22,47 +25,101 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const NAV_ITEMS = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Distributions", href: "/distributions", icon: Box },
-  { name: "Drivers", href: "/drivers", icon: Truck },
-  { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
-  { name: "Water Sources", href: "/water-sources", icon: Droplet },
-  { name: "Settings", href: "/settings", icon: Settings },
+const mainMenu = [
+  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Blog", href: "/blog", icon: Feather },
+  { name: "Forum", href: "/forum", icon: MessageSquare },
+  { name: "Beneficiary", href: "/beneficiaries", icon: Users },
+  { name: "Distribution", href: "/distributions", icon: Truck },
+  { name: "Inventory", href: "/inventory", icon: Package },
+  { name: "Water Source", href: "/water-sources", icon: Droplets },
+  { name: "Weather", href: "/weather", icon: CloudSun },
 ];
 
-export function AppSidebar() {
+const preferences = [
+  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Help Center", href: "/help", icon: HelpCircle },
+];
+
+export function Sidebar() {
   const location = useLocation();
-  
+
   return (
-    <Sidebar className="border-r border-border bg-sidebar shadow-sm">
-      <SidebarHeader className="h-20 flex items-center justify-center border-b border-border">
-        <div className="flex items-center gap-3 w-full px-4">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-md">
-            <HeartPulse className="w-5 h-5 text-growth-lime" />
+    <ShadcnSidebar className="bg-[#F3F4F6]">
+      <SidebarHeader className="p-4 pb-2">
+        {/* Brand */}
+        <div className="flex items-center gap-2 px-2 pb-6">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A3F191] text-[#0A3622]">
+            <Feather className="h-5 w-5" strokeWidth={2.5} />
           </div>
-          <h1 className="text-xl font-bold tracking-wider text-sidebar-foreground">SanityFlow</h1>
+          <span className="text-[20px] font-bold text-[#0A3622] tracking-tight">SanityFlow</span>
+        </div>
+
+        {/* Profile Dropdown */}
+        <div className="mb-2 flex items-center justify-between rounded-[14px] bg-white p-2 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <img
+              src="https://github.com/shadcn.png"
+              alt="Jenny Wilson"
+              className="h-10 w-10 rounded-full object-cover"
+            />
+            <div className="flex flex-col">
+              <span className="font-semibold text-gray-800 text-[13px]">Jenny Wilson</span>
+              <span className="text-[12px] text-gray-500 font-medium">Personal Account</span>
+            </div>
+          </div>
+          <ChevronDown className="h-4 w-4 text-gray-500 mr-1" />
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-4">
+        {/* Main Menu */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/70 font-semibold">Main Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 px-2 py-4">
+            MAIN MENU
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => {
-                const isActive = location.pathname === item.href || (item.href !== "/" && location.pathname.startsWith(item.href));
+              {mainMenu.map((item) => {
+                const isActive = location.pathname === item.href || (location.pathname.startsWith(item.href) && item.href !== '/');
                 return (
                   <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton 
-                      asChild 
-                      tooltip={item.name}
+                    <SidebarMenuButton
+                      asChild
                       isActive={isActive}
-                      className={isActive ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground font-medium" : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium"}
+                      className={isActive ? "bg-white text-gray-900 shadow-[0_2px_8px_rgb(0,0,0,0.04)] font-semibold rounded-xl py-5" : "text-gray-500 hover:bg-gray-200 hover:text-gray-700 font-medium rounded-xl py-5"}
                     >
                       <Link to={item.href}>
-                        <item.icon />
-                        <span>{item.name}</span>
+                        <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+                        <span className="text-[14px]">{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Preferences */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 px-2 py-4 text-left">
+            PREFERENCE
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {preferences.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={isActive ? "bg-white text-gray-900 shadow-[0_2px_8px_rgb(0,0,0,0.04)] font-semibold rounded-xl py-5" : "text-gray-500 hover:bg-gray-200 hover:text-gray-700 font-medium rounded-xl py-5"}
+                    >
+                      <Link to={item.href}>
+                        <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+                        <span className="text-[14px]">{item.name}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -72,17 +129,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="border-t border-border p-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton className="text-sidebar-foreground/80 hover:bg-destructive/10 hover:text-destructive transition-colors font-medium">
-              <LogOut className="w-4 h-4" />
-              <span>Log Out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
+    </ShadcnSidebar>
   );
 }

@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ForumDashboard } from "./components/forum/ForumDashboard";
+import { DistributionDashboard } from "./components/distribution/DistributionDashboard";
 
 const router = createBrowserRouter([
   {
@@ -19,7 +20,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/distributions",
-        element: <div>Distributions Placeholder</div>
+        element: <DistributionDashboard />
       },
       {
         path: "/forum",

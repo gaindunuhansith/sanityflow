@@ -1,5 +1,4 @@
-import React from "react"
-import { Search, ChevronDown, SlidersHorizontal, Plus, Download, Pencil, Trash2, MapPin, Droplet, Activity } from "lucide-react"
+import { Search, SlidersHorizontal, Plus, Download, Pencil, Trash2, MapPin, Droplet } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Input } from "@/components/ui/input"

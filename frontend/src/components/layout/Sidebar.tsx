@@ -10,7 +10,9 @@ import {
   Package,
   Droplets,
   CloudSun,
-  Settings
+  Settings,
+  AlertTriangle,
+  ShieldCheck
 } from "lucide-react";
 
 import {
@@ -29,10 +31,12 @@ const mainMenu = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Blog", href: "/blog", icon: Feather },
   { name: "Forum", href: "/forum", icon: MessageSquare },
+  { name: "Issues", href: "/issues", icon: AlertTriangle },
   { name: "Beneficiary", href: "/beneficiaries", icon: Users },
   { name: "Distribution", href: "/distributions", icon: Truck },
   { name: "Inventory", href: "/inventory", icon: Package },
   { name: "Water Source", href: "/water-sources", icon: Droplets },
+  { name: "Water Quality", href: "/water-tests", icon: ShieldCheck },
   { name: "Weather", href: "/weather", icon: CloudSun },
 ];
 

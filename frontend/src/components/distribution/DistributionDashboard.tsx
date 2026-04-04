@@ -282,6 +282,12 @@ export function DistributionDashboard() {
     })
   }
 
+  const clearFilters = () => {
+    setSearchText("")
+    setStatusFilter("all")
+    setDriverFilter("all")
+  }
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       <div className="flex items-center justify-between mb-6">
@@ -304,7 +310,7 @@ export function DistributionDashboard() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <div className="relative w-70">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -342,9 +348,17 @@ export function DistributionDashboard() {
               ))}
             </SelectContent>
           </Select>
+
+          <Button
+            variant="ghost"
+            className="h-10 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+            onClick={clearFilters}
+          >
+            Clear Filters
+          </Button>
         </div>
 
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-3 xl:ml-auto w-full xl:w-auto justify-end">
           <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
             <Calendar className="mr-2 h-4 w-4 text-gray-500" />
             1-30 September 2028
@@ -357,8 +371,20 @@ export function DistributionDashboard() {
         </div>
       </div>
 
-      <div className="overflow-hidden">
-        <Table className="w-full text-left">
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+        <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium">
+          Showing {filteredOrders.length} of {orders.length} orders
+        </span>
+        {statusFilter !== "all" && (
+          <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">Status: {statusFilter}</span>
+        )}
+        {driverFilter !== "all" && (
+          <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 font-medium">Driver: {driverFilter}</span>
+        )}
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <Table className="w-full min-w-[980px] text-left">
           <TableHeader>
             <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
               <TableHead className="text-gray-500 font-semibold text-xs w-[38%] py-4 pl-4">Order</TableHead>
@@ -518,7 +544,8 @@ export function DistributionDashboard() {
             {filteredOrders.length === 0 && (
               <TableRow className="border-b border-gray-50">
                 <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
-                  No orders match your current filters.
+                  <p className="text-sm font-medium text-gray-700 mb-1">No orders match your current filters.</p>
+                  <p className="text-xs text-gray-500">Try clearing filters or changing the search keyword.</p>
                 </TableCell>
               </TableRow>
             )}

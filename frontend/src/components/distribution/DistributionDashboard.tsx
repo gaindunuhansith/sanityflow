@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { Fragment, useState } from "react"
 import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -200,6 +200,25 @@ const getStatusBadgeClass = (status: OrderStatus) => {
 
 export function DistributionDashboard() {
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
+  const [searchText, setSearchText] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | OrderStatus>("all")
+  const [driverFilter, setDriverFilter] = useState("all")
+
+  const availableDrivers = Array.from(new Set(MOCK_ORDERS.map((order) => order.driverName))).sort()
+
+  const filteredOrders = MOCK_ORDERS.filter((order) => {
+    const normalizedSearch = searchText.trim().toLowerCase()
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      order.orderNumber.toLowerCase().includes(normalizedSearch) ||
+      order.resourceName.toLowerCase().includes(normalizedSearch) ||
+      order.targetLocation.toLowerCase().includes(normalizedSearch)
+
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter
+    const matchesDriver = driverFilter === "all" || order.driverName === driverFilter
+
+    return matchesSearch && matchesStatus && matchesDriver
+  })
 
   const toggleExpand = (id: string) => {
     setExpandedOrders((prev) => {
@@ -240,32 +259,37 @@ export function DistributionDashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search order"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
             />
           </div>
 
-          <Select>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | OrderStatus)}>
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="assigned">Assigned</SelectItem>
-              <SelectItem value="in-transit">In Transit</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Assigned">Assigned</SelectItem>
+              <SelectItem value="In Transit">In Transit</SelectItem>
+              <SelectItem value="Delivered">Delivered</SelectItem>
+              <SelectItem value="Failed">Failed</SelectItem>
             </SelectContent>
           </Select>
 
-          <Select>
+          <Select value={driverFilter} onValueChange={setDriverFilter}>
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Drivers" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Drivers</SelectItem>
-              <SelectItem value="d1">Driver 1</SelectItem>
-              <SelectItem value="d2">Driver 2</SelectItem>
+              {availableDrivers.map((driver) => (
+                <SelectItem key={driver} value={driver}>
+                  {driver}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -301,7 +325,7 @@ export function DistributionDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {MOCK_ORDERS.map((order) => {
+            {filteredOrders.map((order) => {
               const isExpanded = expandedOrders.has(order.id)
               const createdAt = new Date(order.createdAt).toLocaleDateString("en-US", {
                 month: "short",
@@ -309,9 +333,8 @@ export function DistributionDashboard() {
               })
 
               return (
-                <>
+                <Fragment key={order.id}>
                   <TableRow
-                    key={order.id}
                     className={`group transition-colors border-b ${
                       isExpanded
                         ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100"
@@ -411,9 +434,16 @@ export function DistributionDashboard() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               )
             })}
+            {filteredOrders.length === 0 && (
+              <TableRow className="border-b border-gray-50">
+                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
+                  No orders match your current filters.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

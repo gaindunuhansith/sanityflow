@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ForumDashboard } from "./components/forum/ForumDashboard";
+
 import { IssueDashboard } from "./components/Issues/IssueDashboard";
 import { ReportIssueForm } from "./components/Issues/ReportIssueForm";
 import { UpdateIssueForm } from "./components/Issues/UpdateIssueForm";
@@ -10,6 +11,7 @@ import { CreateWaterSourceForm, UpdateWaterSourceForm } from "./components/water
 import { WaterTestDashboard } from "./components/water-tests/WaterTestDashboard";
 import { CreateWaterTestForm, UpdateWaterTestForm } from "./components/water-tests/WaterTestForms";
 import { Link } from "react-router-dom";
+import { DistributionDashboard } from "./components/distribution/DistributionDashboard";
 
 const router = createBrowserRouter([
   {
@@ -41,7 +43,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/distributions",
-        element: <div>Distributions Placeholder</div>
+        element: <DistributionDashboard />
       },
       {
         path: "/forum",

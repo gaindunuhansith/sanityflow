@@ -1,8 +1,9 @@
 import { Fragment, useState } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2 } from "lucide-react"
+import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -18,8 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 type OrderStatus = "Pending" | "Assigned" | "In Transit" | "Delivered" | "Failed"
+type UserRole = "admin" | "driver"
 
 type OrderTimelineItem = {
   id: string
@@ -204,8 +214,18 @@ export function DistributionDashboard() {
   const [searchText, setSearchText] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | OrderStatus>("all")
   const [driverFilter, setDriverFilter] = useState("all")
+  const [currentRole, setCurrentRole] = useState<UserRole>("admin")
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [newResourceName, setNewResourceName] = useState("")
+  const [newQuantity, setNewQuantity] = useState("")
+  const [newTargetLocation, setNewTargetLocation] = useState("")
+  const [newNotes, setNewNotes] = useState("")
 
   const availableDrivers = Array.from(new Set(orders.map((order) => order.driverName))).sort()
+  const canCreate = currentRole === "admin"
+  const canAssign = currentRole === "admin"
+  const canDelete = currentRole === "admin"
+  const canUpdateStatus = currentRole === "driver"
 
   const filteredOrders = orders.filter((order) => {
     const normalizedSearch = searchText.trim().toLowerCase()
@@ -251,6 +271,8 @@ export function DistributionDashboard() {
   }
 
   const handleAssignToggle = (id: string) => {
+    if (!canAssign) return
+
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id !== id) return order
@@ -268,12 +290,16 @@ export function DistributionDashboard() {
   }
 
   const handleStatusCycle = (id: string) => {
+    if (!canUpdateStatus) return
+
     setOrders((prev) =>
       prev.map((order) => (order.id === id ? { ...order, status: cycleStatus(order.status) } : order))
     )
   }
 
   const handleDeleteOrder = (id: string) => {
+    if (!canDelete) return
+
     setOrders((prev) => prev.filter((order) => order.id !== id))
     setExpandedOrders((prev) => {
       const next = new Set(prev)
@@ -288,11 +314,76 @@ export function DistributionDashboard() {
     setDriverFilter("all")
   }
 
+  const handleCreateOrder = () => {
+    if (!canCreate) return
+
+    const quantityValue = Number(newQuantity)
+    const trimmedResource = newResourceName.trim()
+    const trimmedTarget = newTargetLocation.trim()
+    const trimmedNotes = newNotes.trim()
+
+    if (!trimmedResource || !trimmedTarget || Number.isNaN(quantityValue) || quantityValue < 1) {
+      return
+    }
+
+    const now = new Date()
+    const createdAt = now.toISOString()
+    const nextSequence = String(orders.length + 1).padStart(3, "0")
+    const orderNumber = `SF-ORD-${nextSequence}`
+    const id = `${now.getTime()}`
+
+    const newOrder: DistributionOrder = {
+      id,
+      orderNumber,
+      resourceName: trimmedResource,
+      quantity: quantityValue,
+      targetLocation: trimmedTarget,
+      status: "Pending",
+      driverName: "Unassigned",
+      createdBy: "Admin Operations",
+      createdAt,
+      notes: trimmedNotes || "No notes provided.",
+      timeline: [
+        {
+          id: `t-${id}`,
+          message: "Order created from frontend demo form.",
+          actor: "Admin Operations",
+          createdAt,
+        },
+      ],
+    }
+
+    setOrders((prev) => [newOrder, ...prev])
+    setIsCreateDialogOpen(false)
+    setNewResourceName("")
+    setNewQuantity("")
+    setNewTargetLocation("")
+    setNewNotes("")
+  }
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Distribution Orders</h1>
         <div className="flex items-center gap-3">
+          <Select value={currentRole} onValueChange={(value) => setCurrentRole(value as UserRole)}>
+            <SelectTrigger className="w-32 rounded-xl h-10 border-gray-200 bg-white">
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="driver">Driver</SelectItem>
+            </SelectContent>
+          </Select>
+          {canCreate && (
+            <Button
+              className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium"
+              onClick={() => setIsCreateDialogOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Order
+            </Button>
+          )}
           <Select defaultValue="this-month">
             <SelectTrigger className="w-32.5 rounded-xl h-10 border-gray-200 bg-white">
               <SelectValue placeholder="Period" />
@@ -308,6 +399,65 @@ export function DistributionDashboard() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Distribution Order</DialogTitle>
+            <DialogDescription>Frontend demo only. This will update local hardcoded state.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="resourceName">Resource Name</Label>
+              <Input
+                id="resourceName"
+                placeholder="e.g. Clean Water Drums"
+                value={newResourceName}
+                onChange={(event) => setNewResourceName(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantity</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min={1}
+                placeholder="e.g. 120"
+                value={newQuantity}
+                onChange={(event) => setNewQuantity(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="targetLocation">Target Location</Label>
+              <Input
+                id="targetLocation"
+                placeholder="e.g. Sector 5 - North"
+                value={newTargetLocation}
+                onChange={(event) => setNewTargetLocation(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Input
+                id="notes"
+                placeholder="Optional notes"
+                value={newNotes}
+                onChange={(event) => setNewNotes(event.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={handleCreateOrder}>
+              Create Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
@@ -374,6 +524,9 @@ export function DistributionDashboard() {
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium">
           Showing {filteredOrders.length} of {orders.length} orders
+        </span>
+        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
+          Role: {currentRole === "admin" ? "Admin" : "Driver"}
         </span>
         {statusFilter !== "all" && (
           <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">Status: {statusFilter}</span>
@@ -453,27 +606,30 @@ export function DistributionDashboard() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
+                          className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-40"
                           onClick={() => handleAssignToggle(order.id)}
                           title="Assign/Unassign Driver"
+                          disabled={!canAssign}
                         >
                           <UserPlus className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                          className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40"
                           onClick={() => handleStatusCycle(order.id)}
                           title="Cycle Status"
+                          disabled={!canUpdateStatus}
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40"
                           onClick={() => handleDeleteOrder(order.id)}
                           title="Delete Order"
+                          disabled={!canDelete}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

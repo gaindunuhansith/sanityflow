@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -18,7 +19,200 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+type OrderStatus = "Pending" | "Assigned" | "In Transit" | "Delivered" | "Failed"
+
+type OrderTimelineItem = {
+  id: string
+  message: string
+  actor: string
+  createdAt: string
+}
+
+type DistributionOrder = {
+  id: string
+  orderNumber: string
+  resourceName: string
+  quantity: number
+  targetLocation: string
+  status: OrderStatus
+  driverName: string
+  createdBy: string
+  createdAt: string
+  notes: string
+  timeline: OrderTimelineItem[]
+}
+
+const MOCK_ORDERS: DistributionOrder[] = [
+  {
+    id: "64a7d2a34a2e5d9c12345681",
+    orderNumber: "SF-ORD-001",
+    resourceName: "Clean Water Drums",
+    quantity: 120,
+    targetLocation: "Sector 4 - East",
+    status: "Pending",
+    driverName: "Unassigned",
+    createdBy: "Admin Operations",
+    createdAt: "2028-09-25T10:00:00",
+    notes: "Priority supply due to temporary pressure drop in main line.",
+    timeline: [
+      {
+        id: "t1",
+        message: "Order created and pending assignment.",
+        actor: "Admin Operations",
+        createdAt: "2028-09-25T10:00:00",
+      },
+    ],
+  },
+  {
+    id: "64a7d2a34a2e5d9c12345682",
+    orderNumber: "SF-ORD-002",
+    resourceName: "Emergency Water Kits",
+    quantity: 40,
+    targetLocation: "Hilltop Community Center",
+    status: "Assigned",
+    driverName: "Dianne Russell",
+    createdBy: "Logistics Manager",
+    createdAt: "2028-09-24T09:20:00",
+    notes: "Coordinate with local team for controlled handover.",
+    timeline: [
+      {
+        id: "t2",
+        message: "Order created.",
+        actor: "Logistics Manager",
+        createdAt: "2028-09-24T09:20:00",
+      },
+      {
+        id: "t3",
+        message: "Driver assigned to route.",
+        actor: "Dispatch Lead",
+        createdAt: "2028-09-24T10:05:00",
+      },
+    ],
+  },
+  {
+    id: "64a7d2a34a2e5d9c12345683",
+    orderNumber: "SF-ORD-003",
+    resourceName: "Water Purification Tablets",
+    quantity: 260,
+    targetLocation: "Sector 2 - South",
+    status: "In Transit",
+    driverName: "Jacob Jones",
+    createdBy: "Admin Operations",
+    createdAt: "2028-09-24T07:45:00",
+    notes: "Driver to confirm arrival with site supervisor.",
+    timeline: [
+      {
+        id: "t4",
+        message: "Order created.",
+        actor: "Admin Operations",
+        createdAt: "2028-09-24T07:45:00",
+      },
+      {
+        id: "t5",
+        message: "Driver assigned.",
+        actor: "Dispatch Lead",
+        createdAt: "2028-09-24T08:10:00",
+      },
+      {
+        id: "t6",
+        message: "Vehicle departed from warehouse.",
+        actor: "Jacob Jones",
+        createdAt: "2028-09-24T08:35:00",
+      },
+    ],
+  },
+  {
+    id: "64a7d2a34a2e5d9c12345684",
+    orderNumber: "SF-ORD-004",
+    resourceName: "Medical Hygiene Packs",
+    quantity: 90,
+    targetLocation: "West Relief Point",
+    status: "Delivered",
+    driverName: "Guy Hawkins",
+    createdBy: "Relief Coordinator",
+    createdAt: "2028-09-23T12:30:00",
+    notes: "Successful delivery confirmed by local coordinator.",
+    timeline: [
+      {
+        id: "t7",
+        message: "Order created.",
+        actor: "Relief Coordinator",
+        createdAt: "2028-09-23T12:30:00",
+      },
+      {
+        id: "t8",
+        message: "Driver assigned.",
+        actor: "Dispatch Lead",
+        createdAt: "2028-09-23T12:55:00",
+      },
+      {
+        id: "t9",
+        message: "Delivery marked as completed.",
+        actor: "Guy Hawkins",
+        createdAt: "2028-09-23T14:05:00",
+      },
+    ],
+  },
+  {
+    id: "64a7d2a34a2e5d9c12345685",
+    orderNumber: "SF-ORD-005",
+    resourceName: "Portable Storage Tanks",
+    quantity: 8,
+    targetLocation: "North Ridge",
+    status: "Failed",
+    driverName: "Cameron Williamson",
+    createdBy: "Logistics Manager",
+    createdAt: "2028-09-22T16:15:00",
+    notes: "Route blocked due to landslide, awaiting reassignment.",
+    timeline: [
+      {
+        id: "t10",
+        message: "Order created.",
+        actor: "Logistics Manager",
+        createdAt: "2028-09-22T16:15:00",
+      },
+      {
+        id: "t11",
+        message: "Delivery attempt failed due to road closure.",
+        actor: "Cameron Williamson",
+        createdAt: "2028-09-22T18:10:00",
+      },
+    ],
+  },
+]
+
+const getStatusBadgeClass = (status: OrderStatus) => {
+  switch (status) {
+    case "Pending":
+      return "bg-red-50 text-red-500"
+    case "Assigned":
+      return "bg-blue-50 text-blue-600"
+    case "In Transit":
+      return "bg-amber-50 text-amber-600"
+    case "Delivered":
+      return "bg-[#ebf8ee] text-[#4dbd74]"
+    case "Failed":
+      return "bg-rose-50 text-rose-600"
+    default:
+      return "bg-gray-100 text-gray-600"
+  }
+}
+
 export function DistributionDashboard() {
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
+
+  const toggleExpand = (id: string) => {
+    setExpandedOrders((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       <div className="flex items-center justify-between mb-6">
@@ -107,35 +301,119 @@ export function DistributionDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow className="hover:bg-gray-50/50 border-b border-gray-50">
-              <TableCell className="pl-4 py-4">
-                <div className="flex items-center gap-3">
-                  <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
-                  <div className="h-9.5 w-9.5 shrink-0 rounded-full bg-[#c7f7d4] flex items-center justify-center">
-                    <Truck className="h-4.5 w-4.5 text-[#0F392B]" />
-                  </div>
-                  <div className="flex flex-col max-w-[320px]">
-                    <span className="font-semibold text-[13px] truncate pr-4 text-gray-900">
-                      Order #SF-001
-                    </span>
-                    <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
-                      Clean Water Drums • 2028-09-25
-                    </span>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell className="text-sm font-medium text-gray-700 py-4">120</TableCell>
-              <TableCell className="text-sm font-medium text-gray-600 py-4">Sector 4 - East</TableCell>
-              <TableCell className="py-4">
-                <span className="inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold bg-red-50 text-red-500 whitespace-nowrap">
-                  Pending
-                </span>
-              </TableCell>
-              <TableCell className="text-sm font-medium text-gray-600 py-4">Unassigned</TableCell>
-              <TableCell className="text-right pr-6 py-4">
-                <span className="text-xs text-gray-400">UI Step 1</span>
-              </TableCell>
-            </TableRow>
+            {MOCK_ORDERS.map((order) => {
+              const isExpanded = expandedOrders.has(order.id)
+              const createdAt = new Date(order.createdAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })
+
+              return (
+                <>
+                  <TableRow
+                    key={order.id}
+                    className={`group transition-colors border-b ${
+                      isExpanded
+                        ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100"
+                        : "hover:bg-gray-50/50 border-gray-50"
+                    }`}
+                  >
+                    <TableCell className="pl-4 py-4">
+                      <button
+                        onClick={() => toggleExpand(order.id)}
+                        className="flex items-center gap-3 text-left w-full focus:outline-none group"
+                      >
+                        <ChevronRight
+                          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                            isExpanded ? "rotate-90 text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
+                          }`}
+                        />
+                        <div className="h-9.5 w-9.5 shrink-0 rounded-full bg-[#c7f7d4] flex items-center justify-center">
+                          <Truck className="h-4.5 w-4.5 text-[#0F392B]" />
+                        </div>
+                        <div className="flex flex-col max-w-[320px]">
+                          <span className={`font-semibold text-[13px] truncate pr-4 ${isExpanded ? "text-emerald-900" : "text-gray-900"}`}>
+                            {order.orderNumber}
+                          </span>
+                          <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
+                            {order.resourceName} • {createdAt}
+                          </span>
+                        </div>
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-sm font-medium text-gray-700 py-4">{order.quantity}</TableCell>
+                    <TableCell className="text-sm font-medium text-gray-600 py-4">{order.targetLocation}</TableCell>
+                    <TableCell className="py-4">
+                      <span className={`inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold whitespace-nowrap ${getStatusBadgeClass(order.status)}`}>
+                        {order.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm font-medium text-gray-600 py-4">{order.driverName}</TableCell>
+                    <TableCell className="text-right pr-6 py-4">
+                      <span className="text-xs text-gray-400">Hardcoded</span>
+                    </TableCell>
+                  </TableRow>
+
+                  {isExpanded && (
+                    <TableRow className="bg-emerald-50/5 border-b border-gray-100 hover:bg-emerald-50/5">
+                      <TableCell colSpan={6} className="p-0">
+                        <div className="bg-emerald-50/20 border-t border-emerald-100/50 px-8 py-5">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Created By</p>
+                              <p className="text-sm font-medium text-gray-800">{order.createdBy}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Driver</p>
+                              <p className="text-sm font-medium text-gray-800">{order.driverName}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Order ID</p>
+                              <p className="text-sm font-medium text-gray-800">{order.id}</p>
+                            </div>
+                          </div>
+
+                          <div className="mb-4">
+                            <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Notes</p>
+                            <p className="text-sm text-gray-700">{order.notes}</p>
+                          </div>
+
+                          <div className="rounded-xl border border-emerald-100/70 bg-white/80 overflow-hidden">
+                            <Table className="w-full text-left">
+                              <TableHeader>
+                                <TableRow className="border-b border-emerald-100/50 hover:bg-transparent">
+                                  <TableHead className="text-gray-500 font-semibold text-xs py-2 pl-4 w-[55%]">Timeline Event</TableHead>
+                                  <TableHead className="text-gray-500 font-semibold text-xs py-2 w-[20%]">By</TableHead>
+                                  <TableHead className="text-gray-500 font-semibold text-xs py-2 w-[25%]">Time</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {order.timeline.map((item) => {
+                                  const itemDate = new Date(item.createdAt)
+                                  const dateLabel = itemDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                                  const timeLabel = itemDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
+
+                                  return (
+                                    <TableRow key={item.id} className="hover:bg-emerald-50/40 border-b border-emerald-50/50">
+                                      <TableCell className="py-3 pl-4 text-sm text-gray-700">{item.message}</TableCell>
+                                      <TableCell className="py-3 text-sm font-medium text-gray-800">{item.actor}</TableCell>
+                                      <TableCell className="py-3">
+                                        <div className="text-sm text-gray-600">{dateLabel}</div>
+                                        <div className="text-xs text-gray-400 mt-0.5">{timeLabel}</div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              )
+            })}
           </TableBody>
         </Table>
       </div>

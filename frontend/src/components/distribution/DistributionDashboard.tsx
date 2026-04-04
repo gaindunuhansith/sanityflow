@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck } from "lucide-react"
+import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2 } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -199,14 +199,15 @@ const getStatusBadgeClass = (status: OrderStatus) => {
 }
 
 export function DistributionDashboard() {
+  const [orders, setOrders] = useState<DistributionOrder[]>(MOCK_ORDERS)
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
   const [searchText, setSearchText] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | OrderStatus>("all")
   const [driverFilter, setDriverFilter] = useState("all")
 
-  const availableDrivers = Array.from(new Set(MOCK_ORDERS.map((order) => order.driverName))).sort()
+  const availableDrivers = Array.from(new Set(orders.map((order) => order.driverName))).sort()
 
-  const filteredOrders = MOCK_ORDERS.filter((order) => {
+  const filteredOrders = orders.filter((order) => {
     const normalizedSearch = searchText.trim().toLowerCase()
     const matchesSearch =
       normalizedSearch.length === 0 ||
@@ -228,6 +229,55 @@ export function DistributionDashboard() {
       } else {
         next.add(id)
       }
+      return next
+    })
+  }
+
+  const cycleStatus = (status: OrderStatus): OrderStatus => {
+    switch (status) {
+      case "Pending":
+        return "Assigned"
+      case "Assigned":
+        return "In Transit"
+      case "In Transit":
+        return "Delivered"
+      case "Delivered":
+        return "Failed"
+      case "Failed":
+        return "Pending"
+      default:
+        return "Pending"
+    }
+  }
+
+  const handleAssignToggle = (id: string) => {
+    setOrders((prev) =>
+      prev.map((order) => {
+        if (order.id !== id) return order
+
+        const nextDriver = order.driverName === "Unassigned" ? "Dianne Russell" : "Unassigned"
+        const nextStatus = nextDriver === "Unassigned" ? "Pending" : order.status === "Pending" ? "Assigned" : order.status
+
+        return {
+          ...order,
+          driverName: nextDriver,
+          status: nextStatus,
+        }
+      })
+    )
+  }
+
+  const handleStatusCycle = (id: string) => {
+    setOrders((prev) =>
+      prev.map((order) => (order.id === id ? { ...order, status: cycleStatus(order.status) } : order))
+    )
+  }
+
+  const handleDeleteOrder = (id: string) => {
+    setOrders((prev) => prev.filter((order) => order.id !== id))
+    setExpandedOrders((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
       return next
     })
   }
@@ -373,7 +423,35 @@ export function DistributionDashboard() {
                     </TableCell>
                     <TableCell className="text-sm font-medium text-gray-600 py-4">{order.driverName}</TableCell>
                     <TableCell className="text-right pr-6 py-4">
-                      <span className="text-xs text-gray-400">Hardcoded</span>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
+                          onClick={() => handleAssignToggle(order.id)}
+                          title="Assign/Unassign Driver"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                          onClick={() => handleStatusCycle(order.id)}
+                          title="Cycle Status"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleDeleteOrder(order.id)}
+                          title="Delete Order"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
 

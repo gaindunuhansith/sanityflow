@@ -80,7 +80,7 @@ export function ReportIssueForm() {
               name="issueType"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger className="h-11 rounded-xl border-gray-200 bg-white focus-visible:ring-1 focus-visible:ring-emerald-500">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
@@ -103,7 +103,7 @@ export function ReportIssueForm() {
               name="priority"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger className="h-11 rounded-xl border-gray-200 bg-white focus-visible:ring-1 focus-visible:ring-emerald-500">
                     <SelectValue placeholder="Select priority" />
                   </SelectTrigger>

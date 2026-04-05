@@ -79,6 +79,40 @@ const getApiErrorMessage = (error: unknown) => {
   return "Request failed. Please try again."
 }
 
+const validateBeneficiaryForm = ({
+  name,
+  location,
+  contact,
+  familySize,
+}: {
+  name: string
+  location: string
+  contact: string
+  familySize: number
+}) => {
+  if (!name || !location || !contact) {
+    return "All fields are required."
+  }
+
+  if (name.length < 2) {
+    return "Name must be at least 2 characters."
+  }
+
+  if (location.length < 2) {
+    return "Location must be at least 2 characters."
+  }
+
+  if (contact.length < 5) {
+    return "Contact must be at least 5 characters."
+  }
+
+  if (!Number.isInteger(familySize) || familySize < 1) {
+    return "Family size must be a whole number greater than 0."
+  }
+
+  return null
+}
+
 export function BeneficiaryDashboard() {
   const dispatch = useDispatch<AppDispatch>()
   const [createName, setCreateName] = useState("")
@@ -175,13 +209,15 @@ export function BeneficiaryDashboard() {
     const contact = createContact.trim()
     const familySize = Number(createFamilySize)
 
-    if (!name || !location || !contact) {
-      setCreateFormError("All fields are required.")
-      return
-    }
+    const validationError = validateBeneficiaryForm({
+      name,
+      location,
+      contact,
+      familySize,
+    })
 
-    if (!Number.isInteger(familySize) || familySize < 1) {
-      setCreateFormError("Family size must be a whole number greater than 0.")
+    if (validationError) {
+      setCreateFormError(validationError)
       return
     }
 
@@ -234,13 +270,15 @@ export function BeneficiaryDashboard() {
     const contact = editContact.trim()
     const familySize = Number(editFamilySize)
 
-    if (!name || !location || !contact) {
-      setEditFormError("All fields are required.")
-      return
-    }
+    const validationError = validateBeneficiaryForm({
+      name,
+      location,
+      contact,
+      familySize,
+    })
 
-    if (!Number.isInteger(familySize) || familySize < 1) {
-      setEditFormError("Family size must be a whole number greater than 0.")
+    if (validationError) {
+      setEditFormError(validationError)
       return
     }
 

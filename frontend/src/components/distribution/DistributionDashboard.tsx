@@ -251,6 +251,10 @@ export function DistributionDashboard() {
   }
 
   const toggleCreateBeneficiary = (beneficiaryId: string) => {
+    if (createFormError) {
+      setCreateFormError("")
+    }
+
     setCreateBeneficiaryIds((current) => {
       if (current.includes(beneficiaryId)) {
         return current.filter((id) => id !== beneficiaryId)
@@ -285,6 +289,11 @@ export function DistributionDashboard() {
 
     if (!targetLocation) {
       setCreateFormError("Target location is required.")
+      return
+    }
+
+    if (createBeneficiaryIds.length === 0) {
+      setCreateFormError("Please select at least one beneficiary.")
       return
     }
 
@@ -345,6 +354,10 @@ export function DistributionDashboard() {
   }
 
   const toggleUpdateBeneficiary = (beneficiaryId: string) => {
+    if (updateBeneficiariesError) {
+      setUpdateBeneficiariesError("")
+    }
+
     setUpdateBeneficiaryIds((current) => {
       if (current.includes(beneficiaryId)) {
         return current.filter((id) => id !== beneficiaryId)
@@ -369,6 +382,11 @@ export function DistributionDashboard() {
   const handleUpdateBeneficiaries = async () => {
     if (!selectedOrderIdForBeneficiaries) {
       setUpdateBeneficiariesError("Order is not selected.")
+      return
+    }
+
+    if (updateBeneficiaryIds.length === 0) {
+      setUpdateBeneficiariesError("Please select at least one beneficiary.")
       return
     }
 
@@ -555,7 +573,7 @@ export function DistributionDashboard() {
                 })}
               </div>
               <p className="text-xs text-gray-500">
-                Selected: {createBeneficiaryIds.length}
+                Selected: {createBeneficiaryIds.length} (minimum 1)
               </p>
             </div>
             <div className="space-y-2">
@@ -575,7 +593,7 @@ export function DistributionDashboard() {
             <Button variant="outline" onClick={() => handleCreateDialogChange(false)} disabled={isCreatingOrder}>
               Cancel
             </Button>
-            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateOrder()} disabled={isCreatingOrder || isResourcesLoading || isBeneficiariesLoading}>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateOrder()} disabled={isCreatingOrder || isResourcesLoading || isBeneficiariesLoading || beneficiaries.length === 0}>
               {isCreatingOrder ? "Creating..." : "Create Order"}
             </Button>
           </DialogFooter>
@@ -658,7 +676,7 @@ export function DistributionDashboard() {
                 )
               })}
             </div>
-            <p className="text-xs text-gray-500">Selected: {updateBeneficiaryIds.length}</p>
+            <p className="text-xs text-gray-500">Selected: {updateBeneficiaryIds.length} (minimum 1)</p>
             {updateBeneficiariesError && <p className="text-sm text-red-600">{updateBeneficiariesError}</p>}
           </div>
 

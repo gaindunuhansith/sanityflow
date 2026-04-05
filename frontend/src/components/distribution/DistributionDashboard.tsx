@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ import {
   useGetDistributionOrdersQuery,
   useGetDriversQuery,
   useGetResourcesQuery,
+  useGetBeneficiariesQuery,
   useCreateDistributionOrderMutation,
   useUpdateDistributionOrderMutation,
   useUpdateDeliveryStatusMutation,
@@ -119,6 +121,7 @@ export function DistributionDashboard() {
   const [createResourceId, setCreateResourceId] = useState("")
   const [createQuantity, setCreateQuantity] = useState("1")
   const [createTargetLocation, setCreateTargetLocation] = useState("")
+  const [createBeneficiaryIds, setCreateBeneficiaryIds] = useState<string[]>([])
   const [createNotes, setCreateNotes] = useState("")
   const [createFormError, setCreateFormError] = useState("")
   const [assignDriverId, setAssignDriverId] = useState("")
@@ -153,6 +156,7 @@ export function DistributionDashboard() {
 
   const { data: drivers = [] } = useGetDriversQuery()
   const { data: resources = [], isLoading: isResourcesLoading } = useGetResourcesQuery()
+  const { data: beneficiaries = [], isLoading: isBeneficiariesLoading } = useGetBeneficiariesQuery({ eligibilityStatus: "Active" })
   const [createDistributionOrder, { isLoading: isCreatingOrder }] = useCreateDistributionOrderMutation()
   const [updateDistributionOrder, { isLoading: isAssigningDriver }] = useUpdateDistributionOrderMutation()
   const [updateDeliveryStatus, { isLoading: isUpdatingStatus }] = useUpdateDeliveryStatusMutation()
@@ -209,8 +213,19 @@ export function DistributionDashboard() {
     setCreateResourceId("")
     setCreateQuantity("1")
     setCreateTargetLocation("")
+    setCreateBeneficiaryIds([])
     setCreateNotes("")
     setCreateFormError("")
+  }
+
+  const toggleCreateBeneficiary = (beneficiaryId: string) => {
+    setCreateBeneficiaryIds((current) => {
+      if (current.includes(beneficiaryId)) {
+        return current.filter((id) => id !== beneficiaryId)
+      }
+
+      return [...current, beneficiaryId]
+    })
   }
 
   const handleCreateDialogChange = (isOpen: boolean) => {
@@ -248,6 +263,7 @@ export function DistributionDashboard() {
         resource: createResourceId,
         quantity: parsedQuantity,
         targetLocation,
+        ...(createBeneficiaryIds.length > 0 ? { beneficiaries: createBeneficiaryIds } : {}),
         ...(notes ? { notes } : {}),
       }).unwrap()
 
@@ -438,6 +454,37 @@ export function DistributionDashboard() {
               />
             </div>
             <div className="space-y-2">
+              <Label>Beneficiaries</Label>
+              <div className="max-h-40 overflow-auto rounded-md border border-gray-200 px-3 py-2 space-y-2">
+                {isBeneficiariesLoading && (
+                  <p className="text-xs text-gray-500">Loading beneficiaries...</p>
+                )}
+
+                {!isBeneficiariesLoading && beneficiaries.length === 0 && (
+                  <p className="text-xs text-gray-500">No active beneficiaries found.</p>
+                )}
+
+                {!isBeneficiariesLoading && beneficiaries.map((beneficiary) => {
+                  const checked = createBeneficiaryIds.includes(beneficiary._id)
+
+                  return (
+                    <label key={beneficiary._id} className="flex items-start gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => toggleCreateBeneficiary(beneficiary._id)}
+                      />
+                      <span className="text-sm text-gray-700">
+                        {beneficiary.name} ({beneficiary.location})
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-gray-500">
+                Selected: {createBeneficiaryIds.length}
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Input
                 id="notes"
@@ -454,7 +501,7 @@ export function DistributionDashboard() {
             <Button variant="outline" onClick={() => handleCreateDialogChange(false)} disabled={isCreatingOrder}>
               Cancel
             </Button>
-            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateOrder()} disabled={isCreatingOrder || isResourcesLoading}>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateOrder()} disabled={isCreatingOrder || isResourcesLoading || isBeneficiariesLoading}>
               {isCreatingOrder ? "Creating..." : "Create Order"}
             </Button>
           </DialogFooter>

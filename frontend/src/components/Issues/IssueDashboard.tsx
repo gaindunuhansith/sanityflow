@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, Pencil, Trash2, ChevronsUpDown, AlertTriangle, Hammer, Droplets, MapPin } from "lucide-react"
+import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, Pencil, Trash2, AlertTriangle, Hammer, Droplets, MapPin, Loader2 } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Input } from "@/components/ui/input"
@@ -19,89 +19,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-const MOCK_ISSUES = [
-  {
-    id: "iss-001",
-    title: "Major leak at Main Distribution Pipe",
-    reporter: { name: "Cameron Williamson" },
-    category: "infrastructure",
-    priority: "critical",
-    createdAt: "2024-09-25T11:00:00",
-    commentCount: 2,
-    description: "Lost approx. 500 liters in the past hour.",
-    status: "Open",
-    comments: [
-      { id: "c1", auther: "Maintenance Team", content: "Team dispatched to location.", createdAt: "2024-09-25T11:15:00" },
-      { id: "c2", auther: "Cameron Williamson", content: "Awaiting update from maintenance.", createdAt: "2024-09-25T11:30:00" }
-    ]
-  },
-  {
-    id: "iss-002",
-    title: "Contamination suspected in Sector 4 well",
-    reporter: { name: "Annette Black" },
-    category: "quality",
-    priority: "high",
-    createdAt: "2024-09-24T09:00:00",
-    commentCount: 1,
-    description: "Water appears cloudy and has abnormal odor.",
-    status: "In Progress",
-    comments: [
-      { id: "c3", auther: "Lab Technician", content: "Samples collected. Results pending.", createdAt: "2024-09-24T09:12:00" }
-    ]
-  },
-  {
-    id: "iss-003",
-    title: "Delivery truck #5 breakdown",
-    reporter: { name: "Jacob Jones" },
-    category: "logistics",
-    priority: "medium",
-    createdAt: "2024-09-24T10:30:00",
-    commentCount: 0,
-    description: "Engine failure on route to north village.",
-    status: "Resolved",
-    comments: []
-  },
-  {
-    id: "iss-004",
-    title: "Pump recalibration required",
-    reporter: { name: "Dianne Russell" },
-    category: "infrastructure",
-    priority: "low",
-    createdAt: "2024-09-23T13:30:00",
-    commentCount: 1,
-    description: "Pump #2 showing efficiency drop of 5%.",
-    status: "Open",
-    comments: [
-      { id: "c4", auther: "System Admin", content: "Scheduled recalibration for tomorrow.", createdAt: "2024-09-23T14:10:00" }
-    ]
-  },
-  {
-    id: "iss-005",
-    title: "Routine maintenance overdue - Valve A",
-    reporter: { name: "Guy Hawkins" },
-    category: "water",
-    priority: "low",
-    createdAt: "2024-09-23T15:45:00",
-    commentCount: 0,
-    description: "Valve A hasn't been checked this quarter.",
-    status: "Resolved",
-    comments: []
-  }
-]
+import { useGetIssuesQuery, useDeleteIssueMutation } from "@/features/issues/issueApi"
+import { format } from "date-fns"
 
 const getCategoryIcon = (category: string) => {
-  switch (category.toLowerCase()) {
+  switch (category?.toLowerCase()) {
     case "infrastructure": return <Hammer className="h-4.5 w-4.5 text-[#0F392B]" />;
     case "logistics": return <MapPin className="h-4.5 w-4.5 text-[#0F392B]" />;
-    case "quality": return <AlertTriangle className="h-4.5 w-4.5 text-[#0F392B]" />;
-    case "water": return <Droplets className="h-4.5 w-4.5 text-[#0F392B]" />;
+    case "water quality": return <AlertTriangle className="h-4.5 w-4.5 text-[#0F392B]" />;
+    case "water shortage": return <Droplets className="h-4.5 w-4.5 text-[#0F392B]" />;
     default: return <AlertTriangle className="h-4.5 w-4.5 text-[#0F392B]" />;
   }
 }
 
 export function IssueDashboard() {
+  const { data: issuesData, isLoading, error } = useGetIssuesQuery()
+  const [deleteIssue, { isLoading: isDeleting }] = useDeleteIssueMutation()
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
+
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [priorityFilter, setPriorityFilter] = useState("all")
+
+  const rawIssues = issuesData || []
+  
+  // Apply filtering
+  const issues = rawIssues.filter(issue => {
+    const matchesSearch = (issue.description || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (issue.location || "").toLowerCase().includes(searchQuery.toLowerCase())
+                          
+    const matchesCategory = categoryFilter === "all" || (issue.issueType || "").toLowerCase() === categoryFilter.toLowerCase()
+    
+    const matchesPriority = priorityFilter === "all" || (issue.priority || "").toLowerCase() === priorityFilter.toLowerCase()
+    
+    return matchesSearch && matchesCategory && matchesPriority
+  })
 
   const toggleExpand = (id: string) => {
     setExpandedIssues(prev => {
@@ -113,6 +66,16 @@ export function IssueDashboard() {
       }
       return next
     })
+  }
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this issue?")) {
+      try {
+        await deleteIssue(id).unwrap()
+      } catch (err) {
+        console.error("Failed to delete issue", err)
+      }
+    }
   }
 
   return (
@@ -144,29 +107,31 @@ export function IssueDashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search issues"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
             />
           </div>
 
-          <Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="infrastructure">Infrastructure</SelectItem>
-              <SelectItem value="quality">Water Quality</SelectItem>
-              <SelectItem value="logistics">Logistics</SelectItem>
+              <SelectItem value="infrastructure">Infrastructure</SelectItem>    
+              <SelectItem value="water quality">Water Quality</SelectItem>
+              <SelectItem value="water shortage">Water Shortage</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
 
-          <Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Priorities" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
               <SelectItem value="high">High</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="low">Low</SelectItem>
@@ -180,7 +145,7 @@ export function IssueDashboard() {
             1-30 September 2028
             <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
           </Button>
-          <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium asChild">
+          <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium" asChild>
             <Link to="/issues/new">
               <span className="flex items-center">
                  <AlertTriangle className="mr-2 h-4 w-4" />
@@ -197,170 +162,106 @@ export function IssueDashboard() {
 
       {/* Table */}
       <div className="overflow-hidden">
-        <Table className="w-full text-left">
-          <TableHeader>
-            <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
-              <TableHead className="text-gray-500 font-semibold text-xs w-[45%] py-4 pl-4">Issue Description</TableHead>
-              <TableHead className="text-gray-500 font-semibold text-xs w-32 py-4">Reporter</TableHead>
-              <TableHead className="text-gray-500 font-semibold text-xs text-center w-20 py-4">Updates</TableHead>
-              <TableHead className="text-gray-500 font-semibold text-xs w-28 py-4">
-                <div className="flex items-center justify-between">
-                  Status
-                  <ChevronsUpDown className="h-3.5 w-3.5 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="text-gray-500 font-semibold text-xs text-right pr-6 w-24 py-4">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {MOCK_ISSUES.map((issue) => {
-              const isExpanded = expandedIssues.has(issue.id);
-
-              return (
-                <React.Fragment key={issue.id}>
-                  <TableRow 
-                    className={`group transition-colors border-b ${
-                      isExpanded 
-                        ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100" 
-                        : "hover:bg-gray-50/50 border-gray-50"
-                    }`}
-                  >
-                    <TableCell className="pl-4 py-4">
-                      <button 
-                        onClick={() => toggleExpand(issue.id)} 
-                        className="flex items-center gap-3 text-left w-full focus:outline-none group"
-                      >
-                        <ChevronRight className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                          isExpanded ? "rotate-90 text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
-                        }`} />
-                        
-                        <div className="h-9.5 w-9.5 shrink-0 rounded-full bg-[#c7f7d4] flex items-center justify-center">
-                          {getCategoryIcon(issue.category)}
-                        </div>
-
-                        <div className="flex flex-col max-w-50 sm:max-w-62.5 md:max-w-[320px]">
-                          <span className={`font-semibold text-[13px] truncate pr-4 ${isExpanded ? "text-emerald-900" : "text-gray-900"}`}>
-                            {issue.title}
-                          </span>
-                          <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
-                            <span className="capitalize text-gray-700 mr-1">{issue.category}</span> • Priority: <span className="capitalize">{issue.priority}</span>
-                          </span>
-                        </div>
-                      </button>
+        {isLoading ? (
+          <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#0F392B]" /></div>
+        ) : error ? (
+          <div className="text-red-500 text-center p-8">Failed to load issues</div>
+        ) : issues.length === 0 ? (
+          <div className="text-gray-500 text-center p-8">No issues found</div>
+        ) : (
+          <Table className="w-full text-left">
+            <TableHeader>
+              <TableRow className="border-b border-gray-100 hover:bg-transparent">
+                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Issue</TableHead>
+                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Reporter</TableHead>
+                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Category</TableHead>
+                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Priority</TableHead>
+                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Status</TableHead>
+                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {issues.map((issue) => (
+                <React.Fragment key={issue._id}>
+                  <TableRow className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors" onClick={() => toggleExpand(issue._id)}>
+                    <TableCell className="py-4 px-4">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-gray-900">{issue.description.length > 50 ? `${issue.description.substring(0, 50)}...` : issue.description}</span>
+                        <span className="text-xs text-gray-500 mt-0.5">{issue.createdAt && format(new Date(issue.createdAt), 'MMM dd, yyyy HH:mm')}</span>
+                      </div>
                     </TableCell>
-                    <TableCell className="text-sm font-medium text-gray-600 py-4">
-                       {issue.reporter?.name}
+                    <TableCell className="py-4 px-4">
+                      <span className="text-sm text-gray-700 font-medium">{issue.reporter?.name || "Unknown"}</span>
                     </TableCell>
-                    <TableCell className="text-center py-4">
-                      <span className={issue.commentCount > 0 ? "text-emerald-700 font-semibold" : "text-gray-500 font-medium"}>
-                        {issue.commentCount}
+                    <TableCell className="py-4 px-4">
+                      <div className="flex items-center gap-2">
+                        {getCategoryIcon(issue.issueType)}
+                        <span className="text-sm text-gray-700 capitalize">{issue.issueType}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 px-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold capitalize
+                        ${issue.priority === "High" ? "bg-red-50 text-red-600" :
+                          issue.priority === "Medium" ? "bg-amber-50 text-amber-600" :
+                          "bg-blue-50 text-blue-600"}
+                      `}>
+                        {issue.priority}
                       </span>
                     </TableCell>
-                    <TableCell className="py-4">
-                      {issue.status === "Resolved" ? (
-                        <span className="inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold bg-[#ebf8ee] text-[#4dbd74] whitespace-nowrap">
-                          Resolved
-                        </span>
-                      ) : issue.status === "In Progress" ? (
-                        <span className="inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-500 whitespace-nowrap">
-                          In Progress
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold bg-red-50 text-red-500 whitespace-nowrap">
-                          Open
-                        </span>
-                      )}
+                    <TableCell className="py-4 px-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold capitalize border
+                        ${issue.status === "Resolved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          issue.status === "In Progress" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          "bg-gray-50 text-gray-700 border-gray-200"}
+                      `}>
+                        {issue.status}
+                      </span>
                     </TableCell>
-                    <TableCell className="text-right pr-6 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 asChild">
-                          <Link to={`/issues/edit/${issue.id}`}>
+                    <TableCell className="py-4 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50" asChild>
+                            <Link to={`/issues/edit/${issue._id}`}>
                             <Pencil className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleDelete(issue._id)}
+                          disabled={isDeleting}
+                        >
                           <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400" onClick={() => toggleExpand(issue._id)}>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${expandedIssues.has(issue._id) ? "rotate-180" : ""}`} />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-
-                  {/* Expanded Updates Section */}
-                  {isExpanded && (
-                    <TableRow className="bg-emerald-50/5 border-b border-gray-100 hover:bg-emerald-50/5">
-                      <TableCell colSpan={6} className="p-0">
-                        <div className="bg-emerald-50/20 border-t border-emerald-100/50">
-                          {issue.comments && issue.comments.length > 0 ? (
-                            <Table className="w-full text-left">
-                              <TableHeader>
-                                <TableRow className="border-b border-emerald-100/50 hover:bg-transparent">
-                                  <TableHead className="text-gray-500 font-semibold text-xs w-[50%] py-2 pl-12">Update Details</TableHead>
-                                  <TableHead className="text-gray-500 font-semibold text-xs w-[20%] py-2">Author</TableHead>
-                                  <TableHead className="text-gray-500 font-semibold text-xs w-[20%] py-2">Date/Time</TableHead>
-                                  <TableHead className="text-gray-500 font-semibold text-xs w-24 text-right pr-6 py-2">Actions</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {issue.comments.map((comment) => {
-                                  const date = new Date(comment.createdAt);
-                                  const formattedDate = date.toLocaleDateString("en-US", { month: 'short', day: 'numeric' })
-                                  const formattedTime = date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })
-                                  
-                                  return (
-                                    <TableRow key={comment.id} className="hover:bg-emerald-50/40 border-b border-emerald-50/50">
-                                      <TableCell className="py-3 pl-12 relative overflow-hidden">
-                                        <div className="absolute left-6 top-0 bottom-0 w-px bg-emerald-200"></div>
-                                        <div className="absolute left-6 top-1/2 w-4 h-px bg-emerald-200 -mt-px"></div>
-                                        <p className="text-sm text-gray-700 leading-relaxed max-w-xl pr-4">
-                                          {comment.content}
-                                        </p>
-                                      </TableCell>
-                                      <TableCell className="text-sm font-medium text-gray-900 py-3">
-                                        {comment.auther}
-                                      </TableCell>
-                                      <TableCell className="py-3">
-                                        <div className="text-sm text-gray-600">{formattedDate}</div>
-                                        <div className="text-xs text-gray-400 mt-0.5">{formattedTime}</div>
-                                      </TableCell>
-                                      <TableCell className="text-right pr-6 py-3">
-                                        <div className="flex items-center justify-end gap-1">
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50">
-                                            <Pencil className="h-4 w-4" />
-                                          </Button>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50">
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </TableCell>
-                                    </TableRow>
-                                  )
-                                })}
-                              </TableBody>
-                            </Table>
-                          ) : (
-                            <div className="p-6 text-center border-b border-emerald-100/50">
-                              <p className="text-sm text-gray-500">No updates yet for this issue.</p>
+                  {expandedIssues.has(issue._id) && (
+                    <TableRow className="bg-gray-50/50">
+                      <TableCell colSpan={6} className="py-4 px-6 border-b border-gray-100">
+                        <div className="flex flex-col gap-4">
+                          <p className="text-sm text-gray-700">{issue.description}</p>
+                          {issue.location && (
+                            <p className="text-sm text-gray-600"><span className="font-semibold">Location:</span> {issue.location}</p>
+                          )}
+                          {issue.resolutionNotes && (
+                            <div className="bg-white p-4 rounded-xl border border-gray-100">
+                              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Resolution Notes</p>
+                              <p className="text-sm text-gray-800">{issue.resolutionNotes}</p>
                             </div>
                           )}
-                          
-                          {/* Reply Input Box */}
-                          <div className="px-12 py-4 flex gap-3 relative">
-                             <div className="absolute left-6 top-0 bottom-0 w-px bg-emerald-200"></div>
-                             <div className="absolute left-6 top-7 w-4 h-px bg-emerald-200 -mt-px"></div>
-                             <Input placeholder="Type your update..." className="bg-white border-emerald-200 focus-visible:ring-emerald-500 h-10 shadow-sm" />
-                             <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white h-10 shrink-0 px-6 font-medium">
-                               Update Status
-                             </Button>
-                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
                   )}
                 </React.Fragment>
-              )
-            })}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus, Users } from "lucide-react"
+import { Search, SlidersHorizontal, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus, Users } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
 import { Input } from "@/components/ui/input"
@@ -822,11 +822,6 @@ export function DistributionDashboard() {
         </div>
 
         <div className="flex items-center gap-3 xl:ml-auto w-full xl:w-auto justify-end">
-          <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
-            <Calendar className="mr-2 h-4 w-4 text-gray-500" />
-            Live View
-            <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
-          </Button>
           <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium" disabled>
             <Download className="mr-2 h-4 w-4" />
             Download

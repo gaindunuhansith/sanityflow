@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
@@ -32,6 +32,8 @@ import type { AppDispatch, RootState } from "@/store"
 import {
   useGetDistributionOrdersQuery,
   useGetDriversQuery,
+  useGetResourcesQuery,
+  useCreateDistributionOrderMutation,
   type DistributionOrder,
   type DistributionOrderStatus,
 } from "@/features/distribution/distributionApi"
@@ -83,8 +85,35 @@ const getResourceLabel = (order: DistributionOrder) => {
   return "Resource"
 }
 
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return "Request failed. Please try again."
+  }
+
+  const maybeError = error as { data?: unknown }
+  const data = maybeError.data
+
+  if (data && typeof data === "object") {
+    const maybeMessage = data as { message?: unknown; error?: unknown }
+    if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
+      return maybeMessage.message
+    }
+
+    if (typeof maybeMessage.error === "string" && maybeMessage.error.trim().length > 0) {
+      return maybeMessage.error
+    }
+  }
+
+  return "Request failed. Please try again."
+}
+
 export function DistributionDashboard() {
   const dispatch = useDispatch<AppDispatch>()
+  const [createResourceId, setCreateResourceId] = useState("")
+  const [createQuantity, setCreateQuantity] = useState("1")
+  const [createTargetLocation, setCreateTargetLocation] = useState("")
+  const [createNotes, setCreateNotes] = useState("")
+  const [createFormError, setCreateFormError] = useState("")
   const {
     searchText,
     statusFilter,
@@ -108,6 +137,8 @@ export function DistributionDashboard() {
   } = useGetDistributionOrdersQuery(queryParams)
 
   const { data: drivers = [] } = useGetDriversQuery()
+  const { data: resources = [], isLoading: isResourcesLoading } = useGetResourcesQuery()
+  const [createDistributionOrder, { isLoading: isCreatingOrder }] = useCreateDistributionOrderMutation()
 
   const filteredOrders = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
@@ -141,6 +172,59 @@ export function DistributionDashboard() {
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [drivers])
 
+  const resetCreateForm = () => {
+    setCreateResourceId("")
+    setCreateQuantity("1")
+    setCreateTargetLocation("")
+    setCreateNotes("")
+    setCreateFormError("")
+  }
+
+  const handleCreateDialogChange = (isOpen: boolean) => {
+    dispatch(setCreateDialogOpen(isOpen))
+
+    if (!isOpen) {
+      resetCreateForm()
+    }
+  }
+
+  const handleCreateOrder = async () => {
+    const parsedQuantity = Number(createQuantity)
+    const targetLocation = createTargetLocation.trim()
+    const notes = createNotes.trim()
+
+    if (!createResourceId) {
+      setCreateFormError("Please select a resource.")
+      return
+    }
+
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity < 1) {
+      setCreateFormError("Quantity must be at least 1.")
+      return
+    }
+
+    if (!targetLocation) {
+      setCreateFormError("Target location is required.")
+      return
+    }
+
+    setCreateFormError("")
+
+    try {
+      await createDistributionOrder({
+        resource: createResourceId,
+        quantity: parsedQuantity,
+        targetLocation,
+        ...(notes ? { notes } : {}),
+      }).unwrap()
+
+      dispatch(setCreateDialogOpen(false))
+      resetCreateForm()
+    } catch (error) {
+      setCreateFormError(getApiErrorMessage(error))
+    }
+  }
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       <div className="flex items-center justify-between mb-6">
@@ -169,37 +253,73 @@ export function DistributionDashboard() {
         </div>
       </div>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={(isOpen) => dispatch(setCreateDialogOpen(isOpen))}>
+      <Dialog open={isCreateDialogOpen} onOpenChange={handleCreateDialogChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create Distribution Order</DialogTitle>
             <DialogDescription>
-              API wiring is live. Order creation submit will be added in Step 5.
+              Create a new order using available resources from inventory.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="resourceName">Resource</Label>
-              <Input id="resourceName" placeholder="Will be connected to resources list in Step 5" disabled />
+              <Select value={createResourceId} onValueChange={setCreateResourceId}>
+                <SelectTrigger id="resourceName" className="w-full">
+                  <SelectValue placeholder={isResourcesLoading ? "Loading resources..." : "Select resource"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {resources.length === 0 && !isResourcesLoading && (
+                    <SelectItem value="no-resource" disabled>
+                      No resources available
+                    </SelectItem>
+                  )}
+                  {resources.map((resource) => (
+                    <SelectItem key={resource._id} value={resource._id}>
+                      {resource.name} ({resource.quantity} {resource.unit})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="quantity">Quantity</Label>
-              <Input id="quantity" type="number" min={1} disabled />
+              <Input
+                id="quantity"
+                type="number"
+                min={1}
+                value={createQuantity}
+                onChange={(event) => setCreateQuantity(event.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="targetLocation">Target Location</Label>
-              <Input id="targetLocation" disabled />
+              <Input
+                id="targetLocation"
+                value={createTargetLocation}
+                onChange={(event) => setCreateTargetLocation(event.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
-              <Input id="notes" disabled />
+              <Input
+                id="notes"
+                value={createNotes}
+                onChange={(event) => setCreateNotes(event.target.value)}
+              />
             </div>
+            {createFormError && (
+              <p className="text-sm text-red-600">{createFormError}</p>
+            )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => dispatch(setCreateDialogOpen(false))}>
-              Close
+            <Button variant="outline" onClick={() => handleCreateDialogChange(false)} disabled={isCreatingOrder}>
+              Cancel
+            </Button>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateOrder()} disabled={isCreatingOrder || isResourcesLoading}>
+              {isCreatingOrder ? "Creating..." : "Create Order"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -344,7 +464,7 @@ export function DistributionDashboard() {
                             {order._id}
                           </span>
                           <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
-                            {getResourceLabel(order)} � {createdAt}
+                            {getResourceLabel(order)} | {createdAt}
                           </span>
                         </div>
                       </button>

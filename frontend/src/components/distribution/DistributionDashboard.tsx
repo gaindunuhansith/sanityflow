@@ -104,6 +104,18 @@ const getOrderBeneficiaryIds = (order: DistributionOrder) => {
   })
 }
 
+const getOrderBeneficiaryLabels = (order: DistributionOrder) => {
+  const beneficiaries = order.beneficiaries ?? []
+
+  return beneficiaries.map((beneficiary) => {
+    if (typeof beneficiary === "string") {
+      return beneficiary
+    }
+
+    return `${beneficiary.name} (${beneficiary.location})`
+  })
+}
+
 const getApiErrorMessage = (error: unknown) => {
   if (!error || typeof error !== "object") {
     return "Request failed. Please try again."
@@ -831,6 +843,11 @@ export function DistributionDashboard() {
                 month: "short",
                 day: "numeric",
               })
+              const beneficiaryLabels = getOrderBeneficiaryLabels(order)
+              const beneficiarySummary =
+                beneficiaryLabels.length > 0
+                  ? beneficiaryLabels.slice(0, 2).join(", ")
+                  : "No beneficiaries linked"
 
               return (
                 <Fragment key={order._id}>
@@ -860,6 +877,9 @@ export function DistributionDashboard() {
                           </span>
                           <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
                             {getResourceLabel(order)} | {createdAt}
+                          </span>
+                          <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
+                            {beneficiarySummary}
                           </span>
                         </div>
                       </button>
@@ -936,6 +956,21 @@ export function DistributionDashboard() {
                           <div className="mb-4">
                             <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Notes</p>
                             <p className="text-sm text-gray-700">{order.notes ?? "No notes provided."}</p>
+                          </div>
+
+                          <div className="mb-2">
+                            <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Beneficiaries</p>
+                            {beneficiaryLabels.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {beneficiaryLabels.map((label) => (
+                                  <span key={label} className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium px-2.5 py-1">
+                                    {label}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600">No beneficiaries linked.</p>
+                            )}
                           </div>
                         </div>
                       </TableCell>

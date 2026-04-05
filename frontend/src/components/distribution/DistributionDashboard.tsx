@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus } from "lucide-react"
+import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus, Users } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
 import { Input } from "@/components/ui/input"
@@ -94,6 +94,16 @@ const getResourceLabel = (order: DistributionOrder) => {
   return "Resource"
 }
 
+const getOrderBeneficiaryIds = (order: DistributionOrder) => {
+  return (order.beneficiaries ?? []).map((beneficiary) => {
+    if (typeof beneficiary === "string") {
+      return beneficiary
+    }
+
+    return beneficiary._id
+  })
+}
+
 const getApiErrorMessage = (error: unknown) => {
   if (!error || typeof error !== "object") {
     return "Request failed. Please try again."
@@ -126,6 +136,9 @@ export function DistributionDashboard() {
   const [createFormError, setCreateFormError] = useState("")
   const [assignDriverId, setAssignDriverId] = useState("")
   const [assignError, setAssignError] = useState("")
+  const [selectedOrderIdForBeneficiaries, setSelectedOrderIdForBeneficiaries] = useState<string | null>(null)
+  const [updateBeneficiaryIds, setUpdateBeneficiaryIds] = useState<string[]>([])
+  const [updateBeneficiariesError, setUpdateBeneficiariesError] = useState("")
   const [statusValue, setStatusValue] = useState<"In Transit" | "Delivered" | "Failed">("In Transit")
   const [statusError, setStatusError] = useState("")
   const [deleteError, setDeleteError] = useState("")
@@ -158,7 +171,7 @@ export function DistributionDashboard() {
   const { data: resources = [], isLoading: isResourcesLoading } = useGetResourcesQuery()
   const { data: beneficiaries = [], isLoading: isBeneficiariesLoading } = useGetBeneficiariesQuery({ eligibilityStatus: "Active" })
   const [createDistributionOrder, { isLoading: isCreatingOrder }] = useCreateDistributionOrderMutation()
-  const [updateDistributionOrder, { isLoading: isAssigningDriver }] = useUpdateDistributionOrderMutation()
+  const [updateDistributionOrder, { isLoading: isUpdatingOrder }] = useUpdateDistributionOrderMutation()
   const [updateDeliveryStatus, { isLoading: isUpdatingStatus }] = useUpdateDeliveryStatusMutation()
   const [deleteDistributionOrder, { isLoading: isDeletingOrder }] = useDeleteDistributionOrderMutation()
 
@@ -202,6 +215,11 @@ export function DistributionDashboard() {
   const selectedStatusOrder = useMemo(
     () => orders.find((order) => order._id === selectedOrderIdForStatus) ?? null,
     [orders, selectedOrderIdForStatus]
+  )
+
+  const selectedBeneficiariesOrder = useMemo(
+    () => orders.find((order) => order._id === selectedOrderIdForBeneficiaries) ?? null,
+    [orders, selectedOrderIdForBeneficiaries]
   )
 
   const selectedDeleteOrder = useMemo(
@@ -309,6 +327,48 @@ export function DistributionDashboard() {
       closeAssignDialog()
     } catch (error) {
       setAssignError(getApiErrorMessage(error))
+    }
+  }
+
+  const toggleUpdateBeneficiary = (beneficiaryId: string) => {
+    setUpdateBeneficiaryIds((current) => {
+      if (current.includes(beneficiaryId)) {
+        return current.filter((id) => id !== beneficiaryId)
+      }
+
+      return [...current, beneficiaryId]
+    })
+  }
+
+  const openBeneficiariesDialog = (order: DistributionOrder) => {
+    setSelectedOrderIdForBeneficiaries(order._id)
+    setUpdateBeneficiaryIds(getOrderBeneficiaryIds(order))
+    setUpdateBeneficiariesError("")
+  }
+
+  const closeBeneficiariesDialog = () => {
+    setSelectedOrderIdForBeneficiaries(null)
+    setUpdateBeneficiaryIds([])
+    setUpdateBeneficiariesError("")
+  }
+
+  const handleUpdateBeneficiaries = async () => {
+    if (!selectedOrderIdForBeneficiaries) {
+      setUpdateBeneficiariesError("Order is not selected.")
+      return
+    }
+
+    setUpdateBeneficiariesError("")
+
+    try {
+      await updateDistributionOrder({
+        id: selectedOrderIdForBeneficiaries,
+        beneficiaries: updateBeneficiaryIds,
+      }).unwrap()
+
+      closeBeneficiariesDialog()
+    } catch (error) {
+      setUpdateBeneficiariesError(getApiErrorMessage(error))
     }
   }
 
@@ -540,11 +600,60 @@ export function DistributionDashboard() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeAssignDialog} disabled={isAssigningDriver}>
+            <Button variant="outline" onClick={closeAssignDialog} disabled={isUpdatingOrder}>
               Cancel
             </Button>
-            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleAssignDriver()} disabled={isAssigningDriver || availableDrivers.length === 0}>
-              {isAssigningDriver ? "Assigning..." : "Assign Driver"}
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleAssignDriver()} disabled={isUpdatingOrder || availableDrivers.length === 0}>
+              {isUpdatingOrder ? "Assigning..." : "Assign Driver"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedOrderIdForBeneficiaries)} onOpenChange={(isOpen) => { if (!isOpen) closeBeneficiariesDialog() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Beneficiaries</DialogTitle>
+            <DialogDescription>
+              Update beneficiaries for order {selectedBeneficiariesOrder?._id ?? ""}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Label>Beneficiaries</Label>
+            <div className="max-h-48 overflow-auto rounded-md border border-gray-200 px-3 py-2 space-y-2">
+              {isBeneficiariesLoading && (
+                <p className="text-xs text-gray-500">Loading beneficiaries...</p>
+              )}
+
+              {!isBeneficiariesLoading && beneficiaries.length === 0 && (
+                <p className="text-xs text-gray-500">No active beneficiaries found.</p>
+              )}
+
+              {!isBeneficiariesLoading && beneficiaries.map((beneficiary) => {
+                const checked = updateBeneficiaryIds.includes(beneficiary._id)
+
+                return (
+                  <label key={beneficiary._id} className="flex items-start gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleUpdateBeneficiary(beneficiary._id)}
+                    />
+                    <span className="text-sm text-gray-700">{beneficiary.name} ({beneficiary.location})</span>
+                  </label>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-500">Selected: {updateBeneficiaryIds.length}</p>
+            {updateBeneficiariesError && <p className="text-sm text-red-600">{updateBeneficiariesError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeBeneficiariesDialog} disabled={isUpdatingOrder}>
+              Cancel
+            </Button>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleUpdateBeneficiaries()} disabled={isUpdatingOrder || isBeneficiariesLoading}>
+              {isUpdatingOrder ? "Updating..." : "Update Beneficiaries"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -773,6 +882,15 @@ export function DistributionDashboard() {
                           onClick={() => openAssignDialog(order)}
                         >
                           <UserPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+                          title="Update Beneficiaries"
+                          onClick={() => openBeneficiariesDialog(order)}
+                        >
+                          <Users className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"

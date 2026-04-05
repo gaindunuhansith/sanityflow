@@ -92,10 +92,14 @@ export interface GetDriversParams {
   availability?: DriverAvailability
 }
 
+export interface GetBeneficiariesParams {
+  eligibilityStatus?: "Active" | "Inactive"
+}
+
 export const distributionApi = createApi({
   reducerPath: "distributionApi",
   baseQuery: axiosBaseQuery(),
-  tagTypes: ["DistributionOrder", "Driver", "Resource"],
+  tagTypes: ["DistributionOrder", "Driver", "Resource", "Beneficiary"],
   endpoints: (builder) => ({
     getDistributionOrders: builder.query<DistributionOrder[], GetDistributionOrdersParams | void>({
       query: (params) => ({
@@ -194,6 +198,23 @@ export const distributionApi = createApi({
         ]
       },
     }),
+    getBeneficiaries: builder.query<BeneficiaryItem[], GetBeneficiariesParams | void>({
+      query: (params) => ({
+        url: "/beneficiaries",
+        method: "GET",
+        params,
+      }),
+      providesTags: (result) => {
+        if (!result) {
+          return [{ type: "Beneficiary", id: "LIST" }]
+        }
+
+        return [
+          { type: "Beneficiary", id: "LIST" },
+          ...result.map((beneficiary) => ({ type: "Beneficiary" as const, id: beneficiary._id })),
+        ]
+      },
+    }),
   }),
 })
 
@@ -206,4 +227,5 @@ export const {
   useDeleteDistributionOrderMutation,
   useGetDriversQuery,
   useGetResourcesQuery,
+  useGetBeneficiariesQuery,
 } = distributionApi

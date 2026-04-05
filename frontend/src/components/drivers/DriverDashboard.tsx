@@ -1,9 +1,10 @@
-import { Fragment, useMemo } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Pencil, Trash2, Plus } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -19,9 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import type { AppDispatch, RootState } from "@/store"
 import {
   useGetDriversQuery,
+  useCreateDriverMutation,
   type Driver,
   type DriverAvailability,
 } from "@/features/driver/driverApi"
@@ -55,12 +65,44 @@ const getDriverInitials = (name: string) => {
   return initials || "DR"
 }
 
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return "Request failed. Please try again."
+  }
+
+  const maybeError = error as { data?: unknown }
+  const data = maybeError.data
+
+  if (data && typeof data === "object") {
+    const maybeMessage = data as { message?: unknown; error?: unknown }
+
+    if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
+      return maybeMessage.message
+    }
+
+    if (typeof maybeMessage.error === "string" && maybeMessage.error.trim().length > 0) {
+      return maybeMessage.error
+    }
+  }
+
+  return "Request failed. Please try again."
+}
+
 export function DriverDashboard() {
   const dispatch = useDispatch<AppDispatch>()
+  const [createName, setCreateName] = useState("")
+  const [createEmail, setCreateEmail] = useState("")
+  const [createPassword, setCreatePassword] = useState("")
+  const [createContact, setCreateContact] = useState("")
+  const [createVehicleInfo, setCreateVehicleInfo] = useState("")
+  const [createAssignedArea, setCreateAssignedArea] = useState("")
+  const [createAvailability, setCreateAvailability] = useState<DriverAvailability>("Active")
+  const [createFormError, setCreateFormError] = useState("")
   const {
     searchText,
     availabilityFilter,
     expandedDriverIds,
+    isCreateDialogOpen,
   } = useSelector((state: RootState) => state.driver)
 
   const queryParams = useMemo(() => {
@@ -75,6 +117,7 @@ export function DriverDashboard() {
     isError: isDriversError,
     refetch,
   } = useGetDriversQuery(queryParams)
+  const [createDriver, { isLoading: isCreatingDriver }] = useCreateDriverMutation()
 
   const filteredDrivers = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
@@ -96,6 +139,63 @@ export function DriverDashboard() {
 
   const openCreateDialog = () => {
     dispatch(setDriverCreateDialogOpen(true))
+  }
+
+  const resetCreateForm = () => {
+    setCreateName("")
+    setCreateEmail("")
+    setCreatePassword("")
+    setCreateContact("")
+    setCreateVehicleInfo("")
+    setCreateAssignedArea("")
+    setCreateAvailability("Active")
+    setCreateFormError("")
+  }
+
+  const handleCreateDialogChange = (isOpen: boolean) => {
+    dispatch(setDriverCreateDialogOpen(isOpen))
+
+    if (!isOpen) {
+      resetCreateForm()
+    }
+  }
+
+  const handleCreateDriver = async () => {
+    const name = createName.trim()
+    const email = createEmail.trim()
+    const password = createPassword
+    const contact = createContact.trim()
+    const vehicleInfo = createVehicleInfo.trim()
+    const assignedArea = createAssignedArea.trim()
+
+    if (!name || !email || !password || !contact || !vehicleInfo || !assignedArea) {
+      setCreateFormError("All fields are required.")
+      return
+    }
+
+    if (password.length < 8) {
+      setCreateFormError("Password must be at least 8 characters.")
+      return
+    }
+
+    setCreateFormError("")
+
+    try {
+      await createDriver({
+        name,
+        email,
+        password,
+        contact,
+        vehicleInfo,
+        assignedArea,
+        availability: createAvailability,
+      }).unwrap()
+
+      dispatch(setDriverCreateDialogOpen(false))
+      resetCreateForm()
+    } catch (error) {
+      setCreateFormError(getApiErrorMessage(error))
+    }
   }
 
   const openEditDialog = (driverId: string) => {
@@ -138,6 +238,73 @@ export function DriverDashboard() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={handleCreateDialogChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Driver</DialogTitle>
+            <DialogDescription>
+              Add a new driver profile and login account.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="driver-name">Name</Label>
+              <Input id="driver-name" value={createName} onChange={(event) => setCreateName(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="driver-email">Email</Label>
+              <Input id="driver-email" type="email" value={createEmail} onChange={(event) => setCreateEmail(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="driver-password">Password</Label>
+              <Input id="driver-password" type="password" value={createPassword} onChange={(event) => setCreatePassword(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="driver-contact">Contact</Label>
+              <Input id="driver-contact" value={createContact} onChange={(event) => setCreateContact(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="driver-vehicle">Vehicle Info</Label>
+              <Input id="driver-vehicle" value={createVehicleInfo} onChange={(event) => setCreateVehicleInfo(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="driver-area">Assigned Area</Label>
+              <Input id="driver-area" value={createAssignedArea} onChange={(event) => setCreateAssignedArea(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="driver-availability">Availability</Label>
+              <Select value={createAvailability} onValueChange={(value) => setCreateAvailability(value as DriverAvailability)}>
+                <SelectTrigger id="driver-availability" className="w-full">
+                  <SelectValue placeholder="Select availability" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {createFormError && <p className="text-sm text-red-600">{createFormError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleCreateDialogChange(false)} disabled={isCreatingDriver}>
+              Cancel
+            </Button>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateDriver()} disabled={isCreatingDriver}>
+              {isCreatingDriver ? "Creating..." : "Create Driver"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">

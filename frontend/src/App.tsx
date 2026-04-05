@@ -13,6 +13,7 @@ import { WaterTestDashboard } from "./components/water-tests/WaterTestDashboard"
 import { CreateWaterTestForm, UpdateWaterTestForm } from "./components/water-tests/WaterTestForms";
 import { DistributionDashboard } from "./components/distribution/DistributionDashboard";
 import { BlogDashboard } from "./components/blog/BlogDashboard";
+import { DriverDashboard } from "./components/drivers/DriverDashboard";
 
 const router = createBrowserRouter([
   {
@@ -80,7 +81,7 @@ const router = createBrowserRouter([
           },
           {
             path: "drivers",
-            element: <div>Drivers Placeholder</div>
+            element: <DriverDashboard />
           },
           {
             path: "beneficiaries",

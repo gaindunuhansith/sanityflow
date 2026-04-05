@@ -1,6 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   ChevronDown,
   HelpCircle,
@@ -21,7 +20,7 @@ import { logout } from "@/features/auth/authSlice";
 import { authApi } from "@/features/auth/authApi";
 import { forumApi } from "@/features/forum/forumApi";
 import { distributionApi } from "@/features/distribution/distributionApi";
-import type { AppDispatch } from "@/store";
+import type { AppDispatch, RootState } from "@/store";
 
 import {
   Sidebar as ShadcnSidebar,
@@ -57,6 +56,13 @@ export function Sidebar() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
+  const authUser = useSelector((state: RootState) => state.auth.user);
+
+  const savedUser = localStorage.getItem("user");
+  const fallbackUser = savedUser ? (JSON.parse(savedUser) as { name?: string; email?: string; role?: string }) : null;
+  const displayName = authUser?.name ?? fallbackUser?.name ?? "Unknown User";
+  const displayEmail = authUser?.email ?? fallbackUser?.email ?? "No email";
+  const displayRole = (authUser?.role ?? fallbackUser?.role ?? "member").toUpperCase();
 
   const handleLogout = () => {
     dispatch(logout());
@@ -77,33 +83,24 @@ export function Sidebar() {
           <span className="text-[20px] font-bold text-[#0A3622] tracking-tight">SanityFlow</span>
         </div>
 
-        {/* Profile Dropdown */}
+        {/* Profile */}
         <div className="mb-2 flex items-center justify-between rounded-[14px] bg-white p-2 shadow-sm border border-gray-100">
           <div className="flex items-center gap-3">
             <img
               src="https://github.com/shadcn.png"
-              alt="Jenny Wilson"
+              alt={displayName}
               className="h-10 w-10 rounded-full object-cover"
             />
             <div className="flex flex-col">
-              <span className="font-semibold text-gray-800 text-[13px]">Jenny Wilson</span>
-              <span className="text-[12px] text-gray-500 font-medium">Personal Account</span>
+              <span className="font-semibold text-gray-800 text-[13px]">{displayName}</span>
+              <span className="text-[12px] text-gray-500 font-medium">{displayRole} • {displayEmail}</span>
             </div>
           </div>
           <ChevronDown className="h-4 w-4 text-gray-500 mr-1" />
         </div>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mb-2 w-full flex items-center justify-center gap-2 rounded-[12px] border border-gray-200 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </button>
       </SidebarHeader>
 
-      <SidebarContent className="px-4">
+      <SidebarContent className="px-4 flex flex-col">
         {/* Main Menu */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 px-2 py-4">
@@ -159,6 +156,17 @@ export function Sidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <div className="mt-auto pb-3">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 rounded-[12px] border border-gray-200 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
       </SidebarContent>
     </ShadcnSidebar>
   );

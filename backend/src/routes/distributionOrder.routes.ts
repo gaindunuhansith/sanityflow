@@ -12,11 +12,11 @@ import {
 
 const distributionOrderRouter = Router();
 
-distributionOrderRouter.get('/', auth,  getAllDistributionOrders);
-distributionOrderRouter.get('/:id', auth,  getDistributionOrderById);
-distributionOrderRouter.post('/', auth,  createDistributionOrder);
-distributionOrderRouter.put('/:id', auth,  updateDistributionOrder);
-distributionOrderRouter.put('/:id/status', auth,  updateDeliveryStatus);
-distributionOrderRouter.delete('/:id', auth, deleteDistributionOrder);
+distributionOrderRouter.get('/', auth, requireRole('admin', 'driver'), getAllDistributionOrders);
+distributionOrderRouter.get('/:id', auth, requireRole('admin', 'driver'), getDistributionOrderById);
+distributionOrderRouter.post('/', auth, requireRole('admin'), createDistributionOrder);
+distributionOrderRouter.put('/:id', auth, requireRole('admin'), updateDistributionOrder);
+distributionOrderRouter.put('/:id/status', auth, requireRole('driver'), updateDeliveryStatus);
+distributionOrderRouter.delete('/:id', auth, requireRole('admin'), deleteDistributionOrder);
 
 export default distributionOrderRouter;

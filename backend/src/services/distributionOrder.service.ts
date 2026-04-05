@@ -70,19 +70,50 @@ export const getAllDistributionOrders = async (filters?: {
   status?: string;
   driver?: string;
   beneficiary?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
 }) => {
   const query: any = {};
   
   if (filters?.status) query.status = filters.status;
   if (filters?.driver) query.driver = filters.driver;
   if (filters?.beneficiary) query.beneficiaries = filters.beneficiary;
+
+  if (filters?.search) {
+    const pattern = new RegExp(filters.search, 'i');
+    query.$or = [{ targetLocation: pattern }, { notes: pattern }];
+
+    if (mongoose.Types.ObjectId.isValid(filters.search)) {
+      query.$or.push({ _id: new mongoose.Types.ObjectId(filters.search) });
+    }
+  }
+
+  const page = Number.isFinite(filters?.page) ? Math.max(1, filters?.page as number) : 1;
+  const limit = Number.isFinite(filters?.limit)
+    ? Math.min(100, Math.max(1, filters?.limit as number))
+    : 10;
+  const skip = (page - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    DistributionOrder.find(query)
+      .populate('resource', 'name unit category')
+      .populate('driver', 'name email')
+      .populate('createdBy', 'name email')
+      .populate('beneficiaries', 'name location eligibilityStatus')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    DistributionOrder.countDocuments(query),
+  ]);
   
-  return await DistributionOrder.find(query)
-    .populate('resource', 'name unit category')
-    .populate('driver', 'name email')
-    .populate('createdBy', 'name email')
-    .populate('beneficiaries', 'name location eligibilityStatus')
-    .sort({ createdAt: -1 });
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  };
 };
 
 export const getDistributionOrderById = async (id: string) => {

@@ -14,8 +14,40 @@ export interface Beneficiary {
   updatedAt: string
 }
 
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+const normalizePaginatedResponse = <T>(response: unknown, page = 1, limit = 10): PaginatedResponse<T> => {
+  if (Array.isArray(response)) {
+    const allItems = response as T[]
+    const safePage = Math.max(1, page)
+    const safeLimit = Math.max(1, limit)
+    const start = (safePage - 1) * safeLimit
+    const items = allItems.slice(start, start + safeLimit)
+    const total = allItems.length
+
+    return {
+      items,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    }
+  }
+
+  return response as PaginatedResponse<T>
+}
+
 export interface GetBeneficiariesParams {
   eligibilityStatus?: BeneficiaryEligibilityStatus
+  search?: string
+  page?: number
+  limit?: number
 }
 
 export interface CreateBeneficiaryPayload {
@@ -45,12 +77,14 @@ export const beneficiaryApi = createApi({
   baseQuery: axiosBaseQuery(),
   tagTypes: ["Beneficiary"],
   endpoints: (builder) => ({
-    getBeneficiaries: builder.query<Beneficiary[], GetBeneficiariesParams | void>({
+    getBeneficiaries: builder.query<PaginatedResponse<Beneficiary>, GetBeneficiariesParams | void>({
       query: (params) => ({
         url: "/beneficiaries",
         method: "GET",
         params,
       }),
+      transformResponse: (response: unknown, _meta, arg) =>
+        normalizePaginatedResponse<Beneficiary>(response, arg?.page ?? 1, arg?.limit ?? 10),
       providesTags: (result) => {
         if (!result) {
           return [{ type: "Beneficiary", id: "LIST" }]
@@ -58,7 +92,7 @@ export const beneficiaryApi = createApi({
 
         return [
           { type: "Beneficiary", id: "LIST" },
-          ...result.map((beneficiary) => ({ type: "Beneficiary" as const, id: beneficiary._id })),
+          ...result.items.map((beneficiary) => ({ type: "Beneficiary" as const, id: beneficiary._id })),
         ]
       },
     }),

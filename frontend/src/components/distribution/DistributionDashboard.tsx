@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import { Search, SlidersHorizontal, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus, Users } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
@@ -148,6 +148,8 @@ const getApiErrorMessage = (error: unknown) => {
 
 export function DistributionDashboard() {
   const dispatch = useDispatch<AppDispatch>()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [createResourceId, setCreateResourceId] = useState("")
   const [createQuantity, setCreateQuantity] = useState("1")
   const [createTargetLocation, setCreateTargetLocation] = useState("")
@@ -180,15 +182,22 @@ export function DistributionDashboard() {
       ...(statusFilter !== "all" ? { status: statusFilter } : {}),
       ...(driverFilter !== "all" ? { driver: driverFilter } : {}),
       ...(beneficiaryFilter !== "all" ? { beneficiary: beneficiaryFilter } : {}),
+      ...(searchText.trim().length > 0 ? { search: searchText.trim() } : {}),
+      page: currentPage,
+      limit: pageSize,
     }
-  }, [statusFilter, driverFilter, beneficiaryFilter])
+  }, [statusFilter, driverFilter, beneficiaryFilter, searchText, currentPage, pageSize])
 
   const {
-    data: orders = [],
+    data: ordersResponse,
     isLoading: isOrdersLoading,
     isError: isOrdersError,
     refetch,
   } = useGetDistributionOrdersQuery(queryParams)
+
+  const orders = ordersResponse?.items ?? []
+  const totalOrders = ordersResponse?.total ?? 0
+  const totalPages = ordersResponse?.totalPages ?? 1
 
   const { data: drivers = [] } = useGetDriversQuery()
   const { data: resources = [], isLoading: isResourcesLoading } = useGetResourcesQuery()
@@ -208,28 +217,11 @@ export function DistributionDashboard() {
     )
   }, [beneficiaries])
 
-  const filteredOrders = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase()
-
-    return orders.filter((order) => {
-      if (normalizedSearch.length === 0) {
-        return true
-      }
-
-      const targetLocation = order.targetLocation.toLowerCase()
-      const notes = (order.notes ?? "").toLowerCase()
-      const driverName = getDriverName(order).toLowerCase()
-      const resourceText = getResourceLabel(order, resourceNameById).toLowerCase()
-
-      return (
-        order._id.toLowerCase().includes(normalizedSearch) ||
-        targetLocation.includes(normalizedSearch) ||
-        notes.includes(normalizedSearch) ||
-        driverName.includes(normalizedSearch) ||
-        resourceText.includes(normalizedSearch)
-      )
-    })
-  }, [orders, searchText, resourceNameById])
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   const availableDrivers = useMemo(() => {
     return drivers
@@ -436,7 +428,7 @@ export function DistributionDashboard() {
       // Keep table UI in sync immediately after assignment.
       dispatch(
         distributionApi.util.updateQueryData("getDistributionOrders", queryParams, (draft) => {
-          const targetOrder = draft.find((order) => order._id === selectedOrderIdForBeneficiaries)
+          const targetOrder = draft.items.find((order) => order._id === selectedOrderIdForBeneficiaries)
           if (!targetOrder) {
             return
           }
@@ -819,14 +811,20 @@ export function DistributionDashboard() {
             <Input
               placeholder="Search order"
               value={searchText}
-              onChange={(event) => dispatch(setSearchText(event.target.value))}
+              onChange={(event) => {
+                dispatch(setSearchText(event.target.value))
+                setCurrentPage(1)
+              }}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
             />
           </div>
 
           <Select
             value={statusFilter}
-            onValueChange={(value) => dispatch(setStatusFilter(value as "all" | DistributionOrderStatus))}
+            onValueChange={(value) => {
+              dispatch(setStatusFilter(value as "all" | DistributionOrderStatus))
+              setCurrentPage(1)
+            }}
           >
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Status" />
@@ -841,7 +839,13 @@ export function DistributionDashboard() {
             </SelectContent>
           </Select>
 
-          <Select value={driverFilter} onValueChange={(value) => dispatch(setDriverFilter(value))}>
+          <Select
+            value={driverFilter}
+            onValueChange={(value) => {
+              dispatch(setDriverFilter(value))
+              setCurrentPage(1)
+            }}
+          >
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Drivers" />
             </SelectTrigger>
@@ -855,7 +859,13 @@ export function DistributionDashboard() {
             </SelectContent>
           </Select>
 
-          <Select value={beneficiaryFilter} onValueChange={setBeneficiaryFilter}>
+          <Select
+            value={beneficiaryFilter}
+            onValueChange={(value) => {
+              setBeneficiaryFilter(value)
+              setCurrentPage(1)
+            }}
+          >
             <SelectTrigger className="w-44 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Beneficiaries" />
             </SelectTrigger>
@@ -875,6 +885,7 @@ export function DistributionDashboard() {
             onClick={() => {
               dispatch(clearFilters())
               setBeneficiaryFilter("all")
+              setCurrentPage(1)
             }}
           >
             Clear Filters
@@ -891,7 +902,7 @@ export function DistributionDashboard() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium">
-          Showing {filteredOrders.length} of {orders.length} orders
+          Showing {orders.length} of {totalOrders} orders
         </span>
       </div>
 
@@ -929,7 +940,7 @@ export function DistributionDashboard() {
               </TableRow>
             )}
 
-            {!isOrdersLoading && !isOrdersError && filteredOrders.map((order) => {
+            {!isOrdersLoading && !isOrdersError && orders.map((order) => {
               const isExpanded = expandedOrderIds.includes(order._id)
               const createdAt = new Date(order.createdAt).toLocaleDateString("en-US", {
                 month: "short",
@@ -1076,7 +1087,7 @@ export function DistributionDashboard() {
               )
             })}
 
-            {!isOrdersLoading && !isOrdersError && filteredOrders.length === 0 && (
+            {!isOrdersLoading && !isOrdersError && orders.length === 0 && (
               <TableRow className="border-b border-gray-50">
                 <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
                   <p className="text-sm font-medium text-gray-700 mb-1">No orders match your current filters.</p>
@@ -1086,6 +1097,52 @@ export function DistributionDashboard() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center gap-3">
+          <p>
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Records</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value))
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-[92px] rounded-lg border-gray-200 bg-white">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-9 rounded-lg"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            className="h-9 rounded-lg"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   )

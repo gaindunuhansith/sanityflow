@@ -16,8 +16,40 @@ export interface Driver {
   updatedAt: string
 }
 
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+const normalizePaginatedResponse = <T>(response: unknown, page = 1, limit = 10): PaginatedResponse<T> => {
+  if (Array.isArray(response)) {
+    const allItems = response as T[]
+    const safePage = Math.max(1, page)
+    const safeLimit = Math.max(1, limit)
+    const start = (safePage - 1) * safeLimit
+    const items = allItems.slice(start, start + safeLimit)
+    const total = allItems.length
+
+    return {
+      items,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    }
+  }
+
+  return response as PaginatedResponse<T>
+}
+
 export interface GetDriversParams {
   availability?: DriverAvailability
+  search?: string
+  page?: number
+  limit?: number
 }
 
 export interface CreateDriverPayload {
@@ -50,12 +82,14 @@ export const driverApi = createApi({
   baseQuery: axiosBaseQuery(),
   tagTypes: ["Driver"],
   endpoints: (builder) => ({
-    getDrivers: builder.query<Driver[], GetDriversParams | void>({
+    getDrivers: builder.query<PaginatedResponse<Driver>, GetDriversParams | void>({
       query: (params) => ({
         url: "/drivers",
         method: "GET",
         params,
       }),
+      transformResponse: (response: unknown, _meta, arg) =>
+        normalizePaginatedResponse<Driver>(response, arg?.page ?? 1, arg?.limit ?? 10),
       providesTags: (result) => {
         if (!result) {
           return [{ type: "Driver", id: "LIST" }]
@@ -63,7 +97,7 @@ export const driverApi = createApi({
 
         return [
           { type: "Driver", id: "LIST" },
-          ...result.map((driver) => ({ type: "Driver" as const, id: driver._id })),
+          ...result.items.map((driver) => ({ type: "Driver" as const, id: driver._id })),
         ]
       },
     }),

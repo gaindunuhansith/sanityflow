@@ -8,10 +8,41 @@ export const createBeneficiary = async (data: Partial<IBeneficiary>) => {
   return await Beneficiary.create(data);
 };
 
-export const getAllBeneficiaries = async (filters?: { eligibilityStatus?: 'Active' | 'Inactive' }) => {
+export const getAllBeneficiaries = async (filters?: {
+  eligibilityStatus?: 'Active' | 'Inactive';
+  search?: string;
+  page?: number;
+  limit?: number;
+}) => {
   const query: any = {};
-  if (filters?.eligibilityStatus) query.eligibilityStatus = filters.eligibilityStatus;
-  return await Beneficiary.find(query).sort({ createdAt: -1 });
+
+  if (filters?.eligibilityStatus) {
+    query.eligibilityStatus = filters.eligibilityStatus;
+  }
+
+  if (filters?.search) {
+    const pattern = new RegExp(filters.search, 'i');
+    query.$or = [{ name: pattern }, { location: pattern }, { contact: pattern }];
+  }
+
+  const page = Number.isFinite(filters?.page) ? Math.max(1, filters?.page as number) : 1;
+  const limit = Number.isFinite(filters?.limit)
+    ? Math.min(100, Math.max(1, filters?.limit as number))
+    : 10;
+  const skip = (page - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    Beneficiary.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Beneficiary.countDocuments(query),
+  ]);
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  };
 };
 
 export const getBeneficiaryById = async (id: string) => {

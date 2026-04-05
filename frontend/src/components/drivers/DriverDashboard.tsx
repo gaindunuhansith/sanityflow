@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import { Search, SlidersHorizontal, Download, ChevronRight, ChevronsUpDown, Pencil, Trash2, Plus } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
@@ -94,6 +94,8 @@ const getApiErrorMessage = (error: unknown) => {
 
 export function DriverDashboard() {
   const dispatch = useDispatch<AppDispatch>()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [createName, setCreateName] = useState("")
   const [createEmail, setCreateEmail] = useState("")
   const [createPassword, setCreatePassword] = useState("")
@@ -122,11 +124,14 @@ export function DriverDashboard() {
   const queryParams = useMemo(() => {
     return {
       ...(availabilityFilter !== "all" ? { availability: availabilityFilter } : {}),
+      ...(searchText.trim().length > 0 ? { search: searchText.trim() } : {}),
+      page: currentPage,
+      limit: pageSize,
     }
-  }, [availabilityFilter])
+  }, [availabilityFilter, searchText, currentPage, pageSize])
 
   const {
-    data: drivers = [],
+    data: driverResponse,
     isLoading: isDriversLoading,
     isError: isDriversError,
     refetch,
@@ -134,24 +139,15 @@ export function DriverDashboard() {
   const [createDriver, { isLoading: isCreatingDriver }] = useCreateDriverMutation()
   const [updateDriver, { isLoading: isUpdatingDriver }] = useUpdateDriverMutation()
   const [deleteDriver, { isLoading: isDeletingDriver }] = useDeleteDriverMutation()
+  const drivers = driverResponse?.items ?? []
+  const totalDrivers = driverResponse?.total ?? 0
+  const totalPages = driverResponse?.totalPages ?? 1
 
-  const filteredDrivers = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase()
-
-    return drivers.filter((driver) => {
-      if (normalizedSearch.length === 0) {
-        return true
-      }
-
-      return (
-        driver.name.toLowerCase().includes(normalizedSearch) ||
-        driver.email.toLowerCase().includes(normalizedSearch) ||
-        driver.contact.toLowerCase().includes(normalizedSearch) ||
-        driver.vehicleInfo.toLowerCase().includes(normalizedSearch) ||
-        driver.assignedArea.toLowerCase().includes(normalizedSearch)
-      )
-    })
-  }, [drivers, searchText])
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   const selectedEditDriver = useMemo(
     () => drivers.find((driver) => driver._id === selectedDriverIdForEdit) ?? null,
@@ -504,14 +500,20 @@ export function DriverDashboard() {
             <Input
               placeholder="Search driver"
               value={searchText}
-              onChange={(event) => dispatch(setDriverSearchText(event.target.value))}
+              onChange={(event) => {
+                dispatch(setDriverSearchText(event.target.value))
+                setCurrentPage(1)
+              }}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
             />
           </div>
 
           <Select
             value={availabilityFilter}
-            onValueChange={(value) => dispatch(setAvailabilityFilter(value as "all" | DriverAvailability))}
+            onValueChange={(value) => {
+              dispatch(setAvailabilityFilter(value as "all" | DriverAvailability))
+              setCurrentPage(1)
+            }}
           >
             <SelectTrigger className="w-42 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Availability" />
@@ -526,7 +528,10 @@ export function DriverDashboard() {
           <Button
             variant="ghost"
             className="h-10 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-            onClick={() => dispatch(clearDriverFilters())}
+            onClick={() => {
+              dispatch(clearDriverFilters())
+              setCurrentPage(1)
+            }}
           >
             Clear Filters
           </Button>
@@ -542,7 +547,7 @@ export function DriverDashboard() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium">
-          Showing {filteredDrivers.length} of {drivers.length} drivers
+          Showing {drivers.length} of {totalDrivers} drivers
         </span>
       </div>
 
@@ -580,7 +585,7 @@ export function DriverDashboard() {
               </TableRow>
             )}
 
-            {!isDriversLoading && !isDriversError && filteredDrivers.map((driver: Driver) => {
+            {!isDriversLoading && !isDriversError && drivers.map((driver: Driver) => {
               const isExpanded = expandedDriverIds.includes(driver._id)
 
               return (
@@ -673,7 +678,7 @@ export function DriverDashboard() {
               )
             })}
 
-            {!isDriversLoading && !isDriversError && filteredDrivers.length === 0 && (
+            {!isDriversLoading && !isDriversError && drivers.length === 0 && (
               <TableRow className="border-b border-gray-50">
                 <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
                   <p className="text-sm font-medium text-gray-700 mb-1">No drivers match your current filters.</p>
@@ -683,6 +688,52 @@ export function DriverDashboard() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center gap-3">
+          <p>
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Records</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value))
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-[92px] rounded-lg border-gray-200 bg-white">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-9 rounded-lg"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            className="h-9 rounded-lg"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   )

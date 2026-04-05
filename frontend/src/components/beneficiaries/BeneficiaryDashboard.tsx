@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import { ChevronRight, ChevronsUpDown, Download, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
@@ -128,6 +128,8 @@ const validateBeneficiaryForm = ({
 
 export function BeneficiaryDashboard() {
   const dispatch = useDispatch<AppDispatch>()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [createName, setCreateName] = useState("")
   const [createLocation, setCreateLocation] = useState("")
   const [createFamilySize, setCreateFamilySize] = useState("1")
@@ -151,15 +153,16 @@ export function BeneficiaryDashboard() {
   } = useSelector((state: RootState) => state.beneficiary)
 
   const queryParams = useMemo(() => {
-    if (eligibilityFilter === "all") {
-      return undefined
+    return {
+      ...(eligibilityFilter !== "all" ? { eligibilityStatus: eligibilityFilter } : {}),
+      ...(searchText.trim().length > 0 ? { search: searchText.trim() } : {}),
+      page: currentPage,
+      limit: pageSize,
     }
-
-    return { eligibilityStatus: eligibilityFilter }
-  }, [eligibilityFilter])
+  }, [eligibilityFilter, searchText, currentPage, pageSize])
 
   const {
-    data: beneficiaries = [],
+    data: beneficiaryResponse,
     isLoading,
     isError,
     refetch,
@@ -168,22 +171,15 @@ export function BeneficiaryDashboard() {
   const [updateBeneficiary, { isLoading: isUpdatingBeneficiary }] = useUpdateBeneficiaryMutation()
   const [deleteBeneficiary, { isLoading: isDeletingBeneficiary }] = useDeleteBeneficiaryMutation()
 
-  const filteredBeneficiaries = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase()
+  const beneficiaries = beneficiaryResponse?.items ?? []
+  const totalBeneficiaries = beneficiaryResponse?.total ?? 0
+  const totalPages = beneficiaryResponse?.totalPages ?? 1
 
-    return beneficiaries.filter((beneficiary) => {
-      if (!normalizedSearch) {
-        return true
-      }
-
-      return (
-        beneficiary.name.toLowerCase().includes(normalizedSearch) ||
-        beneficiary.location.toLowerCase().includes(normalizedSearch) ||
-        beneficiary.contact.toLowerCase().includes(normalizedSearch) ||
-        beneficiary.eligibilityStatus.toLowerCase().includes(normalizedSearch)
-      )
-    })
-  }, [beneficiaries, searchText])
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   const handleToggleExpand = (beneficiary: Beneficiary) => {
     dispatch(toggleExpandedBeneficiary(beneficiary._id))
@@ -386,13 +382,19 @@ export function BeneficiaryDashboard() {
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
               placeholder="Search by name, location, contact, or status"
               value={searchText}
-              onChange={(event) => dispatch(setBeneficiarySearchText(event.target.value))}
+              onChange={(event) => {
+                dispatch(setBeneficiarySearchText(event.target.value))
+                setCurrentPage(1)
+              }}
             />
           </div>
 
           <Select
             value={eligibilityFilter}
-            onValueChange={(value) => dispatch(setEligibilityFilter(value as "all" | BeneficiaryEligibilityStatus))}
+            onValueChange={(value) => {
+              dispatch(setEligibilityFilter(value as "all" | BeneficiaryEligibilityStatus))
+              setCurrentPage(1)
+            }}
           >
             <SelectTrigger className="w-44 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Eligibility" />
@@ -407,7 +409,10 @@ export function BeneficiaryDashboard() {
           <Button
             variant="ghost"
             className="h-10 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-            onClick={() => dispatch(clearBeneficiaryFilters())}
+            onClick={() => {
+              dispatch(clearBeneficiaryFilters())
+              setCurrentPage(1)
+            }}
           >
             Clear Filters
           </Button>
@@ -423,7 +428,7 @@ export function BeneficiaryDashboard() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium">
-          Showing {filteredBeneficiaries.length} of {beneficiaries.length} beneficiaries
+          Showing {beneficiaries.length} of {totalBeneficiaries} beneficiaries
         </span>
       </div>
 
@@ -457,7 +462,7 @@ export function BeneficiaryDashboard() {
                   Failed to load beneficiaries. Click the filter icon to retry.
                 </TableCell>
               </TableRow>
-            ) : filteredBeneficiaries.length === 0 ? (
+            ) : beneficiaries.length === 0 ? (
               <TableRow className="border-b border-gray-50">
                 <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
                   <p className="text-sm font-medium text-gray-700 mb-1">No beneficiaries match your current filters.</p>
@@ -465,7 +470,7 @@ export function BeneficiaryDashboard() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredBeneficiaries.map((beneficiary) => {
+              beneficiaries.map((beneficiary) => {
                 const isExpanded = expandedBeneficiaryIds.includes(beneficiary._id)
 
                 return (
@@ -562,6 +567,52 @@ export function BeneficiaryDashboard() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center gap-3">
+          <p>
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Records</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value))
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-[92px] rounded-lg border-gray-200 bg-white">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-9 rounded-lg"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            className="h-9 rounded-lg"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+          >
+            Next
+          </Button>
+        </div>
       </div>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={handleCreateDialogChange}>

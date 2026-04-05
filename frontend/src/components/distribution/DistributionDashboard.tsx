@@ -164,13 +164,15 @@ export function DistributionDashboard() {
     selectedOrderIdForStatus,
     selectedOrderIdForDelete,
   } = useSelector((state: RootState) => state.distribution)
+  const [beneficiaryFilter, setBeneficiaryFilter] = useState("all")
 
   const queryParams = useMemo(() => {
     return {
       ...(statusFilter !== "all" ? { status: statusFilter } : {}),
       ...(driverFilter !== "all" ? { driver: driverFilter } : {}),
+      ...(beneficiaryFilter !== "all" ? { beneficiary: beneficiaryFilter } : {}),
     }
-  }, [statusFilter, driverFilter])
+  }, [statusFilter, driverFilter, beneficiaryFilter])
 
   const {
     data: orders = [],
@@ -775,10 +777,27 @@ export function DistributionDashboard() {
             </SelectContent>
           </Select>
 
+          <Select value={beneficiaryFilter} onValueChange={setBeneficiaryFilter}>
+            <SelectTrigger className="w-44 h-10 rounded-xl border-gray-200 bg-white">
+              <SelectValue placeholder="All Beneficiaries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Beneficiaries</SelectItem>
+              {beneficiaries.map((beneficiary) => (
+                <SelectItem key={beneficiary._id} value={beneficiary._id}>
+                  {beneficiary.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button
             variant="ghost"
             className="h-10 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-            onClick={() => dispatch(clearFilters())}
+            onClick={() => {
+              dispatch(clearFilters())
+              setBeneficiaryFilter("all")
+            }}
           >
             Clear Filters
           </Button>

@@ -12,6 +12,7 @@ export interface WaterSource {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  weather?: any; // The backend getById appends a weather object
 }
 
 export type CreateWaterSourceData = {

@@ -6,7 +6,11 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Droplet } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { useCreateWaterSourceMutation, useUpdateWaterSourceMutation, useGetWaterSourceByIdQuery } from "@/features/water-sources/waterSourceApi"
+import { 
+  useCreateWaterSourceMutation, 
+  useGetWaterSourceByIdQuery, 
+  useUpdateWaterSourceMutation 
+} from "@/features/water-sources/waterSourceApi"
 
 export function CreateWaterSourceForm() {
   const navigate = useNavigate()
@@ -14,7 +18,7 @@ export function CreateWaterSourceForm() {
   
   const [formData, setFormData] = useState({
     name: "",
-    type: "well" as 'well' | 'tap' | 'borehole',
+    type: "well" as "well" | "tap" | "borehole",
     capacity: "",
     location: "",
     notes: ""
@@ -24,12 +28,17 @@ export function CreateWaterSourceForm() {
     e.preventDefault()
     try {
       await createWaterSource({
-        ...formData,
+        name: formData.name,
+        type: formData.type,
         capacity: Number(formData.capacity),
+        location: formData.location,
+        notes: formData.notes,
+        condition: "Good",
+        isActive: true
       }).unwrap()
-      navigate('/water-sources')
+      navigate("/water-sources")
     } catch (err) {
-      console.error('Failed to create water source', err)
+      console.error("Failed to create water source", err)
     }
   }
 
@@ -37,7 +46,7 @@ export function CreateWaterSourceForm() {
     <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex-1 max-w-3xl mx-auto mt-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Add Water Source</h1>
-        <p className="text-gray-500 text-sm">Register a new water well, reservoir, or intake facility into the system.</p>
+        <p className="text-gray-500 text-sm">Register a new water well, tap, or borehole into the system.</p>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
@@ -47,20 +56,20 @@ export function CreateWaterSourceForm() {
             <Input 
               required
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
               placeholder="e.g., Community Well Alpha" 
               className="h-11 rounded-xl" 
             />
           </div>
           <div className="space-y-2">
             <Label className="text-gray-700 font-semibold">Type<span className="text-red-500 ml-1">*</span></Label>
-            <Select value={formData.type} onValueChange={(value: any) => setFormData(prev => ({...prev, type: value}))}>
+            <Select value={formData.type} onValueChange={(val: any) => setFormData({...formData, type: val})}>
               <SelectTrigger className="h-11 rounded-xl bg-white">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="well">Groundwater Well</SelectItem>
-                <SelectItem value="tap">Water Tap</SelectItem>
+                <SelectItem value="tap">Public Tap</SelectItem>
                 <SelectItem value="borehole">Borehole</SelectItem>
               </SelectContent>
             </Select>
@@ -73,8 +82,9 @@ export function CreateWaterSourceForm() {
             <Input 
               required
               type="number" 
+              min="0"
               value={formData.capacity}
-              onChange={(e) => setFormData(prev => ({...prev, capacity: e.target.value}))}
+              onChange={(e) => setFormData({...formData, capacity: e.target.value})}
               placeholder="10000" 
               className="h-11 rounded-xl" 
             />
@@ -84,7 +94,7 @@ export function CreateWaterSourceForm() {
             <Input 
               required
               value={formData.location}
-              onChange={(e) => setFormData(prev => ({...prev, location: e.target.value}))}
+              onChange={(e) => setFormData({...formData, location: e.target.value})}
               placeholder="Sector 4 or GPS coords" 
               className="h-11 rounded-xl" 
             />
@@ -95,7 +105,7 @@ export function CreateWaterSourceForm() {
           <Label className="text-gray-700 font-semibold">Description / Notes</Label>
           <Textarea 
             value={formData.notes}
-            onChange={(e) => setFormData(prev => ({...prev, notes: e.target.value}))}
+            onChange={(e) => setFormData({...formData, notes: e.target.value})}
             placeholder="Any particular details..." 
             className="min-h-[100px] rounded-xl resize-y" 
           />
@@ -110,11 +120,14 @@ export function CreateWaterSourceForm() {
         </div>
 
         <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-100">
-          <Button variant="ghost" className="h-11 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 asChild">
+          <Button type="button" variant="ghost" className="h-11 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 asChild">
             <Link to="/water-sources">Cancel</Link>
           </Button>
-          <Button type="submit" disabled={isLoading} className="h-11 px-8 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white font-medium shadow-sm">
-            {isLoading ? 'Saving...' : 'Save Source'}
+          <Button 
+            disabled={isLoading}
+            type="submit" 
+            className="h-11 px-8 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white font-medium shadow-sm">
+            {isLoading ? "Saving..." : "Save Source"}
           </Button>
         </div>
       </form>
@@ -123,74 +136,73 @@ export function CreateWaterSourceForm() {
 }
 
 export function UpdateWaterSourceForm() {
-  const { id } = useParams<{id: string}>()
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data: waterSource, isLoading: isFetching } = useGetWaterSourceByIdQuery(id as string, { skip: !id })
+  
+  const { data: source, isLoading: isFetching } = useGetWaterSourceByIdQuery(id!)
   const [updateWaterSource, { isLoading: isUpdating }] = useUpdateWaterSourceMutation()
 
-  const [formData, setFormData] = useState({
-    isActive: true,
-    condition: "Good" as 'Good' | 'Fair' | 'Poor',
-    notes: ""
+  const [formData, setFormData] = useState<{
+    isActive: string;
+    condition: "Good" | "Fair" | "Poor";
+  }>({
+    isActive: "true",
+    condition: "Good"
   })
 
   useEffect(() => {
-    if (waterSource) {
+    if (source) {
       setFormData({
-        isActive: waterSource.isActive ?? true,
-        condition: (waterSource.condition as 'Good' | 'Fair' | 'Poor') || "Good",
-        notes: waterSource.notes || ""
+        isActive: source.isActive.toString(),
+        condition: source.condition
       })
     }
-  }, [waterSource])
+  }, [source])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!id) return
-
     try {
-      await updateWaterSource({ 
-        id, 
-        body: formData 
+      await updateWaterSource({
+        id,
+        body: {
+          isActive: formData.isActive === "true",
+          condition: formData.condition
+        }
       }).unwrap()
-      navigate('/water-sources')
+      navigate("/water-sources")
     } catch (err) {
-      console.error('Failed to update water source', err)
+      console.error("Failed to update water source status", err)
     }
   }
 
-  if (isFetching) return <div className="p-8 text-center">Loading form details...</div>
+  if (isFetching) return <div>Loading...</div>
+  if (!source) return <div>Source not found</div>
 
   return (
     <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex-1 max-w-3xl mx-auto mt-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Update Water Source ({waterSource?.name})</h1>
-        <p className="text-gray-500 text-sm">Modify details or change operational status.</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Update Water Source</h1>
+        <p className="text-gray-500 text-sm">Modify operational status and physical condition for {source.name}.</p>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label className="text-gray-700 font-semibold">Active Status<span className="text-red-500 ml-1">*</span></Label>
-            <Select 
-              value={formData.isActive ? "active" : "inactive"} 
-              onValueChange={(val) => setFormData(prev => ({...prev, isActive: val === "active"}))}
-            >
+            <Label className="text-gray-700 font-semibold">Status<span className="text-red-500 ml-1">*</span></Label>
+            <Select value={formData.isActive} onValueChange={(val) => setFormData({...formData, isActive: val})}>
               <SelectTrigger className="h-11 rounded-xl bg-white border-emerald-200">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Offline / Inactive</SelectItem>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive / Offline</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label className="text-gray-700 font-semibold">Condition<span className="text-red-500 ml-1">*</span></Label>
-            <Select 
-              value={formData.condition} 
-              onValueChange={(val: any) => setFormData(prev => ({...prev, condition: val}))}
-            >
+            <Select value={formData.condition} onValueChange={(val: any) => setFormData({...formData, condition: val})}>
               <SelectTrigger className="h-11 rounded-xl bg-white border-emerald-200">
                 <SelectValue />
               </SelectTrigger>
@@ -203,22 +215,15 @@ export function UpdateWaterSourceForm() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-gray-700 font-semibold">Update Notes</Label>
-          <Textarea 
-            value={formData.notes}
-            onChange={(e) => setFormData(prev => ({...prev, notes: e.target.value}))}
-            placeholder="Provide context for this update..." 
-            className="min-h-[100px] rounded-xl resize-y" 
-          />
-        </div>
-
         <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-100 mt-6">
           <Button type="button" variant="ghost" className="h-11 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 asChild">
              <Link to="/water-sources">Cancel</Link>
           </Button>
-          <Button type="submit" disabled={isUpdating} className="h-11 px-8 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white font-medium shadow-sm">
-            {isUpdating ? 'Updating...' : 'Update Status'}
+          <Button 
+            disabled={isUpdating}
+            type="submit" 
+            className="h-11 px-8 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white font-medium shadow-sm">
+            {isUpdating ? "Updating..." : "Update Status"}
           </Button>
         </div>
       </form>

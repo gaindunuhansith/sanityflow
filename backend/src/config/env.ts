@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,7 +20,7 @@ const envSchema = z.object({
     BARCODE_API_KEY: z.string().min(1).optional(),
     EMAIL_API_KEY: z.string().min(1),
     OPENWEATHER_API_KEY: z.string().min(1),
-    ALERT_EMAIL: z.string().email(),
+    ALERT_EMAIL: z.string(),
 })
 
 const parseEnv = () => {

@@ -20,6 +20,7 @@ import { logout } from "@/features/auth/authSlice";
 import { authApi } from "@/features/auth/authApi";
 import { forumApi } from "@/features/forum/forumApi";
 import { distributionApi } from "@/features/distribution/distributionApi";
+import { beneficiaryApi } from "@/features/beneficiary/beneficiaryApi";
 import type { AppDispatch, RootState } from "@/store";
 
 import {
@@ -70,6 +71,7 @@ export function Sidebar() {
     dispatch(authApi.util.resetApiState());
     dispatch(forumApi.util.resetApiState());
     dispatch(distributionApi.util.resetApiState());
+    dispatch(beneficiaryApi.util.resetApiState());
     navigate('/login', { replace: true });
   };
 

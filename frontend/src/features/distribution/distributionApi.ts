@@ -37,11 +37,23 @@ export interface ResourceItem {
   updatedAt: string
 }
 
+export interface BeneficiaryItem {
+  _id: string
+  name: string
+  location: string
+  familySize?: number
+  contact?: string
+  eligibilityStatus: "Active" | "Inactive"
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface DistributionOrder {
   _id: string
-  resource: string
+  resource: ResourceItem | string
   quantity: number
   targetLocation: string
+  beneficiaries?: Array<BeneficiaryItem | string>
   status: DistributionOrderStatus
   driver?: ApiUserLite | string | null
   notes?: string
@@ -50,21 +62,56 @@ export interface DistributionOrder {
   updatedAt: string
 }
 
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+const normalizePaginatedResponse = <T>(response: unknown, page = 1, limit = 10): PaginatedResponse<T> => {
+  if (Array.isArray(response)) {
+    const allItems = response as T[]
+    const safePage = Math.max(1, page)
+    const safeLimit = Math.max(1, limit)
+    const start = (safePage - 1) * safeLimit
+    const items = allItems.slice(start, start + safeLimit)
+    const total = allItems.length
+
+    return {
+      items,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    }
+  }
+
+  return response as PaginatedResponse<T>
+}
+
 export interface GetDistributionOrdersParams {
   status?: DistributionOrderStatus
   driver?: string
+  beneficiary?: string
+  search?: string
+  page?: number
+  limit?: number
 }
 
 export interface CreateDistributionOrderPayload {
   resource: string
   quantity: number
   targetLocation: string
+  beneficiaries?: string[]
   notes?: string
 }
 
 export interface UpdateDistributionOrderPayload {
   id: string
   driver?: string
+  beneficiaries?: string[]
   notes?: string
 }
 
@@ -75,19 +122,29 @@ export interface UpdateDeliveryStatusPayload {
 
 export interface GetDriversParams {
   availability?: DriverAvailability
+  page?: number
+  limit?: number
+}
+
+export interface GetBeneficiariesParams {
+  eligibilityStatus?: "Active" | "Inactive"
+  page?: number
+  limit?: number
 }
 
 export const distributionApi = createApi({
   reducerPath: "distributionApi",
   baseQuery: axiosBaseQuery(),
-  tagTypes: ["DistributionOrder", "Driver", "Resource"],
+  tagTypes: ["DistributionOrder", "Driver", "Resource", "Beneficiary"],
   endpoints: (builder) => ({
-    getDistributionOrders: builder.query<DistributionOrder[], GetDistributionOrdersParams | void>({
+    getDistributionOrders: builder.query<PaginatedResponse<DistributionOrder>, GetDistributionOrdersParams | void>({
       query: (params) => ({
         url: "/distributions",
         method: "GET",
         params,
       }),
+      transformResponse: (response: unknown, _meta, arg) =>
+        normalizePaginatedResponse<DistributionOrder>(response, arg?.page ?? 1, arg?.limit ?? 10),
       providesTags: (result) => {
         if (!result) {
           return [{ type: "DistributionOrder", id: "LIST" }]
@@ -95,7 +152,7 @@ export const distributionApi = createApi({
 
         return [
           { type: "DistributionOrder", id: "LIST" },
-          ...result.map((order) => ({ type: "DistributionOrder" as const, id: order._id })),
+          ...result.items.map((order) => ({ type: "DistributionOrder" as const, id: order._id })),
         ]
       },
     }),
@@ -150,8 +207,14 @@ export const distributionApi = createApi({
       query: (params) => ({
         url: "/drivers",
         method: "GET",
-        params,
+        params: {
+          ...params,
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 100,
+        },
       }),
+      transformResponse: (response: unknown, _meta, arg) =>
+        normalizePaginatedResponse<DriverProfile>(response, arg?.page ?? 1, arg?.limit ?? 100).items,
       providesTags: (result) => {
         if (!result) {
           return [{ type: "Driver", id: "LIST" }]
@@ -179,6 +242,29 @@ export const distributionApi = createApi({
         ]
       },
     }),
+    getBeneficiaries: builder.query<BeneficiaryItem[], GetBeneficiariesParams | void>({
+      query: (params) => ({
+        url: "/beneficiaries",
+        method: "GET",
+        params: {
+          ...params,
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 100,
+        },
+      }),
+      transformResponse: (response: unknown, _meta, arg) =>
+        normalizePaginatedResponse<BeneficiaryItem>(response, arg?.page ?? 1, arg?.limit ?? 100).items,
+      providesTags: (result) => {
+        if (!result) {
+          return [{ type: "Beneficiary", id: "LIST" }]
+        }
+
+        return [
+          { type: "Beneficiary", id: "LIST" },
+          ...result.map((beneficiary) => ({ type: "Beneficiary" as const, id: beneficiary._id })),
+        ]
+      },
+    }),
   }),
 })
 
@@ -191,4 +277,5 @@ export const {
   useDeleteDistributionOrderMutation,
   useGetDriversQuery,
   useGetResourcesQuery,
+  useGetBeneficiariesQuery,
 } = distributionApi

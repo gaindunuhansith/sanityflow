@@ -10,6 +10,8 @@ import { blogApi } from '@/features/blog/blogApi'
 import { blogReducer } from '@/features/blog/blogSlice'
 import { driverReducer } from '@/features/driver/driverSlice'
 import { driverApi } from '@/features/driver/driverApi'
+import { beneficiaryReducer } from '@/features/beneficiary/beneficiarySlice'
+import { beneficiaryApi } from '@/features/beneficiary/beneficiaryApi'
 
 export const store = configureStore({
   reducer: {
@@ -17,23 +19,31 @@ export const store = configureStore({
     auth: authReducer,
     distribution: distributionReducer,
     driver: driverReducer,
+    beneficiary: beneficiaryReducer,
     blog: blogReducer,
     [authApi.reducerPath]: authApi.reducer,
     [forumApi.reducerPath]: forumApi.reducer,
     [issueApi.reducerPath]: issueApi.reducer,
     [distributionApi.reducerPath]: distributionApi.reducer,
     [driverApi.reducerPath]: driverApi.reducer,
+    [beneficiaryApi.reducerPath]: beneficiaryApi.reducer,
     [blogApi.reducerPath]: blogApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
       forumApi.middleware,
       authApi.middleware,
+      distributionApi.middleware,
+      driverApi.middleware,
+      beneficiaryApi.middleware,
+    ),
+
       issueApi.middleware,
       distributionApi.middleware,
       driverApi.middleware,
       blogApi.middleware
     ),
+
 
 })
 

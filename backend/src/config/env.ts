@@ -27,7 +27,7 @@ const parseEnv = () => {
     const result = envSchema.safeParse(process.env);
 
     if(!result.success){
-        console.error('Error parsing environment variables', result.error.format()); 
+        console.error('Error parsing environment variables', result.error.issues);
         process.exit(1);
     }
 

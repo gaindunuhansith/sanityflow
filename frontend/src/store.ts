@@ -36,15 +36,9 @@ export const store = configureStore({
       distributionApi.middleware,
       driverApi.middleware,
       beneficiaryApi.middleware,
-    ),
-
       issueApi.middleware,
-      distributionApi.middleware,
-      driverApi.middleware,
       blogApi.middleware
     ),
-
-
 })
 
 export type RootState = ReturnType<typeof store.getState>

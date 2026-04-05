@@ -36,6 +36,7 @@ import {
   useCreateDistributionOrderMutation,
   useUpdateDistributionOrderMutation,
   useUpdateDeliveryStatusMutation,
+  useDeleteDistributionOrderMutation,
   type DistributionOrder,
   type DistributionOrderStatus,
 } from "@/features/distribution/distributionApi"
@@ -45,9 +46,11 @@ import {
   setDriverFilter,
   clearFilters,
   toggleExpandedOrder,
+  collapseOrder,
   setCreateDialogOpen,
   setSelectedOrderIdForAssign,
   setSelectedOrderIdForStatus,
+  setSelectedOrderIdForDelete,
 } from "@/features/distribution/distributionSlice"
 
 const getStatusBadgeClass = (status: DistributionOrderStatus) => {
@@ -122,6 +125,7 @@ export function DistributionDashboard() {
   const [assignError, setAssignError] = useState("")
   const [statusValue, setStatusValue] = useState<"In Transit" | "Delivered" | "Failed">("In Transit")
   const [statusError, setStatusError] = useState("")
+  const [deleteError, setDeleteError] = useState("")
   const {
     searchText,
     statusFilter,
@@ -130,6 +134,7 @@ export function DistributionDashboard() {
     isCreateDialogOpen,
     selectedOrderIdForAssign,
     selectedOrderIdForStatus,
+    selectedOrderIdForDelete,
   } = useSelector((state: RootState) => state.distribution)
 
   const queryParams = useMemo(() => {
@@ -151,6 +156,7 @@ export function DistributionDashboard() {
   const [createDistributionOrder, { isLoading: isCreatingOrder }] = useCreateDistributionOrderMutation()
   const [updateDistributionOrder, { isLoading: isAssigningDriver }] = useUpdateDistributionOrderMutation()
   const [updateDeliveryStatus, { isLoading: isUpdatingStatus }] = useUpdateDeliveryStatusMutation()
+  const [deleteDistributionOrder, { isLoading: isDeletingOrder }] = useDeleteDistributionOrderMutation()
 
   const filteredOrders = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
@@ -192,6 +198,11 @@ export function DistributionDashboard() {
   const selectedStatusOrder = useMemo(
     () => orders.find((order) => order._id === selectedOrderIdForStatus) ?? null,
     [orders, selectedOrderIdForStatus]
+  )
+
+  const selectedDeleteOrder = useMemo(
+    () => orders.find((order) => order._id === selectedOrderIdForDelete) ?? null,
+    [orders, selectedOrderIdForDelete]
   )
 
   const resetCreateForm = () => {
@@ -320,6 +331,33 @@ export function DistributionDashboard() {
       closeStatusDialog()
     } catch (error) {
       setStatusError(getApiErrorMessage(error))
+    }
+  }
+
+  const openDeleteDialog = (order: DistributionOrder) => {
+    setDeleteError("")
+    dispatch(setSelectedOrderIdForDelete(order._id))
+  }
+
+  const closeDeleteDialog = () => {
+    dispatch(setSelectedOrderIdForDelete(null))
+    setDeleteError("")
+  }
+
+  const handleDeleteOrder = async () => {
+    if (!selectedOrderIdForDelete) {
+      setDeleteError("Order is not selected.")
+      return
+    }
+
+    setDeleteError("")
+
+    try {
+      await deleteDistributionOrder(selectedOrderIdForDelete).unwrap()
+      dispatch(collapseOrder(selectedOrderIdForDelete))
+      closeDeleteDialog()
+    } catch (error) {
+      setDeleteError(getApiErrorMessage(error))
     }
   }
 
@@ -495,6 +533,32 @@ export function DistributionDashboard() {
             </Button>
             <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleUpdateStatus()} disabled={isUpdatingStatus}>
               {isUpdatingStatus ? "Updating..." : "Update Status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedOrderIdForDelete)} onOpenChange={(isOpen) => { if (!isOpen) closeDeleteDialog() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Distribution Order</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Delete order {selectedDeleteOrder?._id ?? ""}?
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteDialog} disabled={isDeletingOrder}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleDeleteOrder()}
+              disabled={isDeletingOrder}
+            >
+              {isDeletingOrder ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -676,8 +740,8 @@ export function DistributionDashboard() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          title="Delete Order (Step 7)"
-                          disabled
+                          title="Delete Order"
+                          onClick={() => openDeleteDialog(order)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

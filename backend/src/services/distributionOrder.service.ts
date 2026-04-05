@@ -1,20 +1,46 @@
 import DistributionOrder from '../models/DistributionOrder.js';
 import { Resource } from '../models/resource.model.js';
 import { InventoryTransaction } from '../models/inventoryTransaction.model.js';
+import Beneficiary from '../models/Beneficiary.js';
 import mongoose from 'mongoose';
 import { AppError } from '../utils/errorHandler.js';
 import { sendOrderAssignedEmail, sendStatusUpdateEmail } from './email.service.js';
+
+const validateBeneficiaries = async (beneficiaries?: string[]) => {
+  if (!beneficiaries || beneficiaries.length === 0) {
+    return;
+  }
+
+  for (const beneficiaryId of beneficiaries) {
+    if (!mongoose.Types.ObjectId.isValid(beneficiaryId)) {
+      throw new AppError(400, `Invalid beneficiary ID: ${beneficiaryId}`);
+    }
+  }
+
+  const foundBeneficiaries = await Beneficiary.find({ _id: { $in: beneficiaries } }).select('_id eligibilityStatus');
+  if (foundBeneficiaries.length !== beneficiaries.length) {
+    throw new AppError(404, 'One or more beneficiaries not found');
+  }
+
+  const inactiveBeneficiary = foundBeneficiaries.find((beneficiary) => beneficiary.eligibilityStatus !== 'Active');
+  if (inactiveBeneficiary) {
+    throw new AppError(400, 'All beneficiaries must be Active');
+  }
+};
 
 export const createDistributionOrder = async (data: {
   resource: string;
   quantity: number;
   targetLocation: string;
+  beneficiaries?: string[] | undefined;
   notes?: string | undefined;
   createdBy: string;
 }) => {
   const resource = await Resource.findById(data.resource);
   if (!resource) throw new AppError(404, 'Resource not found');
   if (resource.quantity < data.quantity) throw new AppError(400, 'Insufficient stock');
+
+  await validateBeneficiaries(data.beneficiaries);
 
   const order = await DistributionOrder.create({ ...data, status: 'Pending' });
 
@@ -33,15 +59,18 @@ export const createDistributionOrder = async (data: {
 export const getAllDistributionOrders = async (filters?: {
   status?: string;
   driver?: string;
+  beneficiary?: string;
 }) => {
   const query: any = {};
   
   if (filters?.status) query.status = filters.status;
   if (filters?.driver) query.driver = filters.driver;
+  if (filters?.beneficiary) query.beneficiaries = filters.beneficiary;
   
   return await DistributionOrder.find(query)
     .populate('driver', 'name email')
     .populate('createdBy', 'name email')
+    .populate('beneficiaries', 'name location eligibilityStatus')
     .sort({ createdAt: -1 });
 };
 
@@ -52,7 +81,8 @@ export const getDistributionOrderById = async (id: string) => {
   
   const order = await DistributionOrder.findById(id)
     .populate('driver', 'name email')
-    .populate('createdBy', 'name email');
+    .populate('createdBy', 'name email')
+    .populate('beneficiaries', 'name location eligibilityStatus');
   
   if (!order) {
     throw new AppError(404, 'Distribution order not found');
@@ -63,7 +93,7 @@ export const getDistributionOrderById = async (id: string) => {
 
 export const updateDistributionOrder = async (
   id: string,
-  data: { driver?: string | undefined; notes?: string | undefined }
+  data: { driver?: string | undefined; beneficiaries?: string[] | undefined; notes?: string | undefined }
 ) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError(400, 'Invalid order ID');
@@ -71,6 +101,10 @@ export const updateDistributionOrder = async (
   
   const updateData: any = {};
   if (data.notes !== undefined) updateData.notes = data.notes;
+  if (data.beneficiaries !== undefined) {
+    await validateBeneficiaries(data.beneficiaries);
+    updateData.beneficiaries = data.beneficiaries;
+  }
   
   if (data.driver) {
     if (!mongoose.Types.ObjectId.isValid(data.driver)) {
@@ -85,7 +119,8 @@ export const updateDistributionOrder = async (
     updateData,
     { new: true, runValidators: true }
   ).populate<{ driver: { _id: mongoose.Types.ObjectId; name: string; email: string } | null }>('driver', 'name email')
-   .populate('createdBy', 'name email');
+    .populate('createdBy', 'name email')
+    .populate('beneficiaries', 'name location eligibilityStatus');
   
   if (!order) {
     throw new AppError(404, 'Distribution order not found');
@@ -115,7 +150,8 @@ export const updateDeliveryStatus = async (id: string, status: string) => {
     { status },
     { new: true, runValidators: true }
   ).populate('driver', 'name email')
-   .populate<{ createdBy: { _id: mongoose.Types.ObjectId; name: string; email: string } }>('createdBy', 'name email');
+   .populate<{ createdBy: { _id: mongoose.Types.ObjectId; name: string; email: string } }>('createdBy', 'name email')
+   .populate('beneficiaries', 'name location eligibilityStatus');
   
   if (!order) {
     throw new AppError(404, 'Distribution order not found');

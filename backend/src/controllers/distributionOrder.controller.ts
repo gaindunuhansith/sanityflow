@@ -18,10 +18,11 @@ export const createDistributionOrder = async (req: Request, res: Response, next:
 
 export const getAllDistributionOrders = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { status, driver } = req.query;
+    const { status, driver, beneficiary } = req.query;
     const orders = await distributionOrderService.getAllDistributionOrders({
       status: status as string,
-      driver: driver as string
+      driver: driver as string,
+      beneficiary: beneficiary as string
     });
     res.json(orders);
   } catch (error) {

@@ -37,11 +37,23 @@ export interface ResourceItem {
   updatedAt: string
 }
 
+export interface BeneficiaryItem {
+  _id: string
+  name: string
+  location: string
+  familySize?: number
+  contact?: string
+  eligibilityStatus: "Active" | "Inactive"
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface DistributionOrder {
   _id: string
   resource: string
   quantity: number
   targetLocation: string
+  beneficiaries?: Array<BeneficiaryItem | string>
   status: DistributionOrderStatus
   driver?: ApiUserLite | string | null
   notes?: string
@@ -53,18 +65,21 @@ export interface DistributionOrder {
 export interface GetDistributionOrdersParams {
   status?: DistributionOrderStatus
   driver?: string
+  beneficiary?: string
 }
 
 export interface CreateDistributionOrderPayload {
   resource: string
   quantity: number
   targetLocation: string
+  beneficiaries?: string[]
   notes?: string
 }
 
 export interface UpdateDistributionOrderPayload {
   id: string
   driver?: string
+  beneficiaries?: string[]
   notes?: string
 }
 

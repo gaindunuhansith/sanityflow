@@ -1,4 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   ChevronDown,
   HelpCircle,
@@ -12,8 +14,14 @@ import {
   CloudSun,
   Settings,
   AlertTriangle,
-  ShieldCheck
+  ShieldCheck,
+  LogOut
 } from "lucide-react";
+import { logout } from "@/features/auth/authSlice";
+import { authApi } from "@/features/auth/authApi";
+import { forumApi } from "@/features/forum/forumApi";
+import { distributionApi } from "@/features/distribution/distributionApi";
+import type { AppDispatch } from "@/store";
 
 import {
   Sidebar as ShadcnSidebar,
@@ -46,7 +54,17 @@ const preferences = [
 ];
 
 export function Sidebar() {
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const location = useLocation();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    dispatch(authApi.util.resetApiState());
+    dispatch(forumApi.util.resetApiState());
+    dispatch(distributionApi.util.resetApiState());
+    navigate('/login', { replace: true });
+  };
 
   return (
     <ShadcnSidebar className="bg-[#F3F4F6]">
@@ -74,6 +92,15 @@ export function Sidebar() {
           </div>
           <ChevronDown className="h-4 w-4 text-gray-500 mr-1" />
         </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mb-2 w-full flex items-center justify-center gap-2 rounded-[12px] border border-gray-200 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </button>
       </SidebarHeader>
 
       <SidebarContent className="px-4">

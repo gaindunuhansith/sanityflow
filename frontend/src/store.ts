@@ -26,9 +26,14 @@ export const store = configureStore({
     [blogApi.reducerPath]: blogApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(forumApi.middleware, authApi.middleware, distributionApi.middleware, driverApi.middleware),
-
-    getDefaultMiddleware().concat(forumApi.middleware, authApi.middleware, distributionApi.middleware, blogApi.middleware),
+    getDefaultMiddleware().concat(
+      forumApi.middleware,
+      authApi.middleware,
+      issueApi.middleware,
+      distributionApi.middleware,
+      driverApi.middleware,
+      blogApi.middleware
+    ),
 
 })
 

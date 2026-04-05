@@ -1,7 +1,10 @@
 import { configureStore } from '@reduxjs/toolkit'
+import { forumReducer } from '@/features/forum/forumSlice'
 
 export const store = configureStore({
-  reducer: (state = {}) => state,
+  reducer: {
+    forum: forumReducer,
+  },
 })
 
 export type RootState = ReturnType<typeof store.getState>

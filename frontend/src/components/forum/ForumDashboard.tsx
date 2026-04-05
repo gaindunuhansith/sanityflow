@@ -1,5 +1,18 @@
-import React, { useState } from "react"
+import React from "react"
 import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, Pencil, Trash2, ChevronsUpDown, Droplets, Truck, Package, ShieldCheck } from "lucide-react"
+import {
+  selectForumState,
+  selectVisibleForumThreads,
+  setCategoryFilter,
+  setPeriodFilter,
+  setSearchQuery,
+  setTagFilter,
+  submitReply,
+  toggleExpandThread,
+  updateReplyDraft,
+  type ForumTag,
+} from "@/features/forum/forumSlice"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -19,72 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const MOCK_THREADS = [
-  {
-    id: "64a7b1c34a2e5d9c12345671",
-    title: "Decrease in tank pressure at the main reservoir",
-    author: { name: "Cameron Williamson" },
-    tag: "water",
-    createdAt: "2024-09-25T11:00:00",
-    replyCount: 2,
-    content: "Noted a 15% drop in pressure from main tank.",
-    status: "Pending",
-    replies: [
-      { id: "r1", author: "Admin Operations", content: "Dispatching a field technician.", createdAt: "2024-09-25T11:15:00" },
-      { id: "r2", author: "Cameron Williamson", content: "Maintaining current pump flow.", createdAt: "2024-09-25T11:30:00" }
-    ]
-  },
-  {
-    id: "64a7b1c34a2e5d9c12345672",
-    title: "Distribution delay for Sector 4",
-    author: { name: "Annette Black" },
-    tag: "distributions",
-    createdAt: "2024-09-24T09:00:00",
-    replyCount: 1,
-    content: "Truck broke down. Requesting replacement.",
-    status: "Pending",
-    replies: [
-      { id: "r3", author: "Dispatch Lead", content: "Replacement truck is en route. ETA 45 mins.", createdAt: "2024-09-24T09:12:00" }
-    ]
-  },
-  {
-    id: "64a7b1c34a2e5d9c12345673",
-    title: "New water quality test guidelines",
-    author: { name: "Jacob Jones" },
-    tag: "quality",
-    createdAt: "2024-09-24T10:30:00",
-    replyCount: 0,
-    content: "Review attached compliance standards.",
-    status: "Completed",
-    replies: []
-  },
-  {
-    id: "64a7b1c34a2e5d9c12345674",
-    title: "Supplier missing from the directory",
-    author: { name: "Dianne Russell" },
-    tag: "inventory",
-    createdAt: "2024-09-23T13:30:00",
-    replyCount: 1,
-    content: "Trying to log a batch, Vendor missing.",
-    status: "Pending",
-    replies: [
-      { id: "r4", author: "System Admin", content: "AquaTech is now active. Please retry.", createdAt: "2024-09-23T14:10:00" }
-    ]
-  },
-  {
-    id: "64a7b1c34a2e5d9c12345675",
-    title: "Routine checkup: Valve #12",
-    author: { name: "Guy Hawkins" },
-    tag: "water",
-    createdAt: "2024-09-23T15:45:00",
-    replyCount: 0,
-    content: "Standard inspection done.",
-    status: "Completed",
-    replies: []
-  }
-]
-
-const getTagIcon = (tag: string) => {
+const getTagIcon = (tag: ForumTag) => {
   switch (tag.toLowerCase()) {
     case "water": return <Droplets className="h-4.5 w-4.5 text-[#0F392B]" />;
     case "distributions": return <Truck className="h-4.5 w-4.5 text-[#0F392B]" />;
@@ -95,18 +43,12 @@ const getTagIcon = (tag: string) => {
 }
 
 export function ForumDashboard() {
-  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
+  const dispatch = useAppDispatch()
+  const threads = useAppSelector(selectVisibleForumThreads)
+  const { expandedThreadIds, searchQuery, categoryFilter, tagFilter, periodFilter, replyDraftByThreadId } = useAppSelector(selectForumState)
 
   const toggleExpand = (id: string) => {
-    setExpandedThreads(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
+    dispatch(toggleExpandThread(id))
   }
 
   return (
@@ -115,7 +57,7 @@ export function ForumDashboard() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Recent Threads</h1>
         <div className="flex items-center gap-3">
-          <Select defaultValue="this-month">
+          <Select value={periodFilter} onValueChange={(value) => dispatch(setPeriodFilter(value as "this-month" | "last-month" | "this-year"))}>
             <SelectTrigger className="w-32.5 rounded-xl h-10 border-gray-200 bg-white">
               <SelectValue placeholder="Period" />
             </SelectTrigger>
@@ -138,11 +80,13 @@ export function ForumDashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search thread"
+              value={searchQuery}
+              onChange={(event) => dispatch(setSearchQuery(event.target.value))}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
             />
           </div>
 
-          <Select>
+          <Select value={categoryFilter} onValueChange={(value) => dispatch(setCategoryFilter(value as "all" | "alerts" | "projects" | "training"))}>
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Category" />
             </SelectTrigger>
@@ -154,14 +98,16 @@ export function ForumDashboard() {
             </SelectContent>
           </Select>
 
-          <Select>
+          <Select value={tagFilter} onValueChange={(value) => dispatch(setTagFilter(value as "all" | ForumTag))}>
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Tags" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Tags</SelectItem>
-              <SelectItem value="open">Emergency</SelectItem>
-              <SelectItem value="closed">Community</SelectItem>
+              <SelectItem value="water">Water</SelectItem>
+              <SelectItem value="distributions">Distributions</SelectItem>
+              <SelectItem value="inventory">Inventory</SelectItem>
+              <SelectItem value="quality">Quality</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -197,8 +143,8 @@ export function ForumDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {MOCK_THREADS.map((thread) => {
-              const isExpanded = expandedThreads.has(thread.id);
+            {threads.map((thread) => {
+              const isExpanded = expandedThreadIds.includes(thread.id);
 
               return (
                 <React.Fragment key={thread.id}>
@@ -325,8 +271,19 @@ export function ForumDashboard() {
                           <div className="px-12 py-4 flex gap-3 relative">
                              <div className="absolute left-6 top-0 bottom-0 w-px bg-emerald-200"></div>
                              <div className="absolute left-6 top-7 w-4 h-px bg-emerald-200 -mt-px"></div>
-                             <Input placeholder="Type your reply..." className="bg-white border-emerald-200 focus-visible:ring-emerald-500 h-10 shadow-sm" />
-                             <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white h-10 shrink-0 px-6 font-medium">
+                             <Input
+                               placeholder="Type your reply..."
+                               value={replyDraftByThreadId[thread.id] ?? ""}
+                               onChange={(event) =>
+                                 dispatch(updateReplyDraft({ threadId: thread.id, value: event.target.value }))
+                               }
+                               className="bg-white border-emerald-200 focus-visible:ring-emerald-500 h-10 shadow-sm"
+                             />
+                             <Button
+                               className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white h-10 shrink-0 px-6 font-medium"
+                               disabled={!(replyDraftByThreadId[thread.id] ?? "").trim()}
+                               onClick={() => dispatch(submitReply({ threadId: thread.id }))}
+                             >
                                Reply
                              </Button>
                           </div>

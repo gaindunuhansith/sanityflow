@@ -40,6 +40,7 @@ const mainMenu = [
   { name: "Forum", href: "/forum", icon: MessageSquare },
   { name: "Issues", href: "/issues", icon: AlertTriangle },
   { name: "Beneficiary", href: "/beneficiaries", icon: Users },
+  { name: "Drivers", href: "/drivers", icon: Users },
   { name: "Distribution", href: "/distributions", icon: Truck },
   { name: "Inventory", href: "/inventory", icon: Package },
   { name: "Water Source", href: "/water-sources", icon: Droplets },

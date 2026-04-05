@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog"
 import type { AppDispatch, RootState } from "@/store"
 import {
+  distributionApi,
   useGetDistributionOrdersQuery,
   useGetDriversQuery,
   useGetResourcesQuery,
@@ -157,6 +158,7 @@ export function DistributionDashboard() {
   const [assignError, setAssignError] = useState("")
   const [selectedOrderIdForBeneficiaries, setSelectedOrderIdForBeneficiaries] = useState<string | null>(null)
   const [updateBeneficiaryIds, setUpdateBeneficiaryIds] = useState<string[]>([])
+  const [beneficiaryLabelsOverrideByOrder, setBeneficiaryLabelsOverrideByOrder] = useState<Record<string, string[]>>({})
   const [updateBeneficiariesError, setUpdateBeneficiariesError] = useState("")
   const [statusValue, setStatusValue] = useState<"In Transit" | "Delivered" | "Failed">("In Transit")
   const [statusError, setStatusError] = useState("")
@@ -411,11 +413,48 @@ export function DistributionDashboard() {
 
     setUpdateBeneficiariesError("")
 
+    const selectedLabels = beneficiaries
+      .filter((beneficiary) => updateBeneficiaryIds.includes(beneficiary._id))
+      .map((beneficiary) => `${beneficiary.name} (${beneficiary.location})`)
+
+    const fallbackLabels =
+      selectedLabels.length > 0
+        ? selectedLabels
+        : updateBeneficiaryIds.map((id) => beneficiaryLabelById.get(id) ?? `Beneficiary ${id.slice(-6)}`)
+
     try {
       await updateDistributionOrder({
         id: selectedOrderIdForBeneficiaries,
         beneficiaries: updateBeneficiaryIds,
       }).unwrap()
+
+      setBeneficiaryLabelsOverrideByOrder((current) => ({
+        ...current,
+        [selectedOrderIdForBeneficiaries]: fallbackLabels,
+      }))
+
+      // Keep table UI in sync immediately after assignment.
+      dispatch(
+        distributionApi.util.updateQueryData("getDistributionOrders", queryParams, (draft) => {
+          const targetOrder = draft.find((order) => order._id === selectedOrderIdForBeneficiaries)
+          if (!targetOrder) {
+            return
+          }
+
+          targetOrder.beneficiaries = beneficiaries
+            .filter((beneficiary) => updateBeneficiaryIds.includes(beneficiary._id))
+            .map((beneficiary) => ({
+              _id: beneficiary._id,
+              name: beneficiary.name,
+              location: beneficiary.location,
+              familySize: beneficiary.familySize,
+              contact: beneficiary.contact,
+              eligibilityStatus: beneficiary.eligibilityStatus,
+              createdAt: beneficiary.createdAt,
+              updatedAt: beneficiary.updatedAt,
+            }))
+        })
+      )
 
       await refetch()
 
@@ -896,7 +935,11 @@ export function DistributionDashboard() {
                 month: "short",
                 day: "numeric",
               })
-              const beneficiaryLabels = getOrderBeneficiaryLabels(order, beneficiaryLabelById)
+              const beneficiaryLabelsFromOrder = getOrderBeneficiaryLabels(order, beneficiaryLabelById)
+              const beneficiaryLabels =
+                beneficiaryLabelsFromOrder.length > 0
+                  ? beneficiaryLabelsFromOrder
+                  : (beneficiaryLabelsOverrideByOrder[order._id] ?? [])
               const beneficiarySummary =
                 beneficiaryLabels.length > 0
                   ? beneficiaryLabels.slice(0, 2).join(", ")

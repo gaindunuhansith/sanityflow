@@ -42,7 +42,13 @@ export const createDistributionOrder = async (data: {
 
   await validateBeneficiaries(data.beneficiaries);
 
-  const order = await DistributionOrder.create({ ...data, status: 'Pending' });
+  const normalizedBeneficiaries = data.beneficiaries ? Array.from(new Set(data.beneficiaries)) : [];
+
+  const order = await DistributionOrder.create({
+    ...data,
+    beneficiaries: normalizedBeneficiaries,
+    status: 'Pending'
+  });
 
   await Resource.findByIdAndUpdate(data.resource, { $inc: { quantity: -data.quantity } });
   await InventoryTransaction.create({
@@ -109,7 +115,7 @@ export const updateDistributionOrder = async (
   if (data.notes !== undefined) updateData.notes = data.notes;
   if (data.beneficiaries !== undefined) {
     await validateBeneficiaries(data.beneficiaries);
-    updateData.beneficiaries = data.beneficiaries;
+    updateData.beneficiaries = Array.from(new Set(data.beneficiaries));
   }
   
   if (data.driver) {
@@ -120,11 +126,22 @@ export const updateDistributionOrder = async (
     updateData.status = 'Assigned';
   }
   
-  const order = await DistributionOrder.findByIdAndUpdate(
+  if (Object.keys(updateData).length === 0) {
+    throw new AppError(400, 'No valid fields provided for update');
+  }
+
+  const updatedOrder = await DistributionOrder.findByIdAndUpdate(
     id,
-    updateData,
+    { $set: updateData },
     { new: true, runValidators: true }
-  ).populate('resource', 'name unit category')
+  );
+
+  if (!updatedOrder) {
+    throw new AppError(404, 'Distribution order not found');
+  }
+
+  const order = await DistributionOrder.findById(id)
+    .populate('resource', 'name unit category')
     .populate<{ driver: { _id: mongoose.Types.ObjectId; name: string; email: string } | null }>('driver', 'name email')
     .populate('createdBy', 'name email')
     .populate('beneficiaries', 'name location eligibilityStatus');

@@ -34,6 +34,8 @@ import {
   useGetDriversQuery,
   useGetResourcesQuery,
   useCreateDistributionOrderMutation,
+  useUpdateDistributionOrderMutation,
+  useUpdateDeliveryStatusMutation,
   type DistributionOrder,
   type DistributionOrderStatus,
 } from "@/features/distribution/distributionApi"
@@ -44,6 +46,8 @@ import {
   clearFilters,
   toggleExpandedOrder,
   setCreateDialogOpen,
+  setSelectedOrderIdForAssign,
+  setSelectedOrderIdForStatus,
 } from "@/features/distribution/distributionSlice"
 
 const getStatusBadgeClass = (status: DistributionOrderStatus) => {
@@ -114,12 +118,18 @@ export function DistributionDashboard() {
   const [createTargetLocation, setCreateTargetLocation] = useState("")
   const [createNotes, setCreateNotes] = useState("")
   const [createFormError, setCreateFormError] = useState("")
+  const [assignDriverId, setAssignDriverId] = useState("")
+  const [assignError, setAssignError] = useState("")
+  const [statusValue, setStatusValue] = useState<"In Transit" | "Delivered" | "Failed">("In Transit")
+  const [statusError, setStatusError] = useState("")
   const {
     searchText,
     statusFilter,
     driverFilter,
     expandedOrderIds,
     isCreateDialogOpen,
+    selectedOrderIdForAssign,
+    selectedOrderIdForStatus,
   } = useSelector((state: RootState) => state.distribution)
 
   const queryParams = useMemo(() => {
@@ -139,6 +149,8 @@ export function DistributionDashboard() {
   const { data: drivers = [] } = useGetDriversQuery()
   const { data: resources = [], isLoading: isResourcesLoading } = useGetResourcesQuery()
   const [createDistributionOrder, { isLoading: isCreatingOrder }] = useCreateDistributionOrderMutation()
+  const [updateDistributionOrder, { isLoading: isAssigningDriver }] = useUpdateDistributionOrderMutation()
+  const [updateDeliveryStatus, { isLoading: isUpdatingStatus }] = useUpdateDeliveryStatusMutation()
 
   const filteredOrders = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
@@ -171,6 +183,16 @@ export function DistributionDashboard() {
       }))
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [drivers])
+
+  const selectedAssignOrder = useMemo(
+    () => orders.find((order) => order._id === selectedOrderIdForAssign) ?? null,
+    [orders, selectedOrderIdForAssign]
+  )
+
+  const selectedStatusOrder = useMemo(
+    () => orders.find((order) => order._id === selectedOrderIdForStatus) ?? null,
+    [orders, selectedOrderIdForStatus]
+  )
 
   const resetCreateForm = () => {
     setCreateResourceId("")
@@ -222,6 +244,82 @@ export function DistributionDashboard() {
       resetCreateForm()
     } catch (error) {
       setCreateFormError(getApiErrorMessage(error))
+    }
+  }
+
+  const openAssignDialog = (order: DistributionOrder) => {
+    const currentDriverId = order.driver && typeof order.driver === "object" ? order.driver._id : ""
+    setAssignDriverId(currentDriverId)
+    setAssignError("")
+    dispatch(setSelectedOrderIdForAssign(order._id))
+  }
+
+  const closeAssignDialog = () => {
+    dispatch(setSelectedOrderIdForAssign(null))
+    setAssignDriverId("")
+    setAssignError("")
+  }
+
+  const handleAssignDriver = async () => {
+    if (!selectedOrderIdForAssign) {
+      setAssignError("Order is not selected.")
+      return
+    }
+
+    if (!assignDriverId) {
+      setAssignError("Please select a driver.")
+      return
+    }
+
+    setAssignError("")
+
+    try {
+      await updateDistributionOrder({
+        id: selectedOrderIdForAssign,
+        driver: assignDriverId,
+      }).unwrap()
+
+      closeAssignDialog()
+    } catch (error) {
+      setAssignError(getApiErrorMessage(error))
+    }
+  }
+
+  const openStatusDialog = (order: DistributionOrder) => {
+    const allowedStatuses: Array<"In Transit" | "Delivered" | "Failed"> = ["In Transit", "Delivered", "Failed"]
+    if (allowedStatuses.includes(order.status as "In Transit" | "Delivered" | "Failed")) {
+      setStatusValue(order.status as "In Transit" | "Delivered" | "Failed")
+    } else {
+      setStatusValue("In Transit")
+    }
+
+    setStatusError("")
+    dispatch(setSelectedOrderIdForStatus(order._id))
+  }
+
+  const closeStatusDialog = () => {
+    dispatch(setSelectedOrderIdForStatus(null))
+    setStatusValue("In Transit")
+    setStatusError("")
+  }
+
+  const handleUpdateStatus = async () => {
+    if (!selectedOrderIdForStatus) {
+      setStatusError("Order is not selected.")
+      return
+    }
+
+    setStatusError("")
+
+    try {
+      await updateDeliveryStatus({
+        id: selectedOrderIdForStatus,
+        status: statusValue,
+      }).unwrap()
+
+      closeStatusDialog()
+    } catch (error) {
+      setStatusError(getApiErrorMessage(error))
     }
   }
 
@@ -320,6 +418,83 @@ export function DistributionDashboard() {
             </Button>
             <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateOrder()} disabled={isCreatingOrder || isResourcesLoading}>
               {isCreatingOrder ? "Creating..." : "Create Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedOrderIdForAssign)} onOpenChange={(isOpen) => { if (!isOpen) closeAssignDialog() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Driver</DialogTitle>
+            <DialogDescription>
+              Select a driver for order {selectedAssignOrder?._id ?? ""}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Label htmlFor="assign-driver">Driver</Label>
+            <Select value={assignDriverId} onValueChange={setAssignDriverId}>
+              <SelectTrigger id="assign-driver" className="w-full">
+                <SelectValue placeholder="Select driver" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableDrivers.length === 0 && (
+                  <SelectItem value="no-driver" disabled>
+                    No drivers available
+                  </SelectItem>
+                )}
+                {availableDrivers.map((driver) => (
+                  <SelectItem key={driver.value} value={driver.value}>
+                    {driver.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {assignError && <p className="text-sm text-red-600">{assignError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAssignDialog} disabled={isAssigningDriver}>
+              Cancel
+            </Button>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleAssignDriver()} disabled={isAssigningDriver || availableDrivers.length === 0}>
+              {isAssigningDriver ? "Assigning..." : "Assign Driver"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedOrderIdForStatus)} onOpenChange={(isOpen) => { if (!isOpen) closeStatusDialog() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Delivery Status</DialogTitle>
+            <DialogDescription>
+              Update status for order {selectedStatusOrder?._id ?? ""}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Label htmlFor="update-status">Status</Label>
+            <Select value={statusValue} onValueChange={(value) => setStatusValue(value as "In Transit" | "Delivered" | "Failed")}>
+              <SelectTrigger id="update-status" className="w-full">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="In Transit">In Transit</SelectItem>
+                <SelectItem value="Delivered">Delivered</SelectItem>
+                <SelectItem value="Failed">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+            {statusError && <p className="text-sm text-red-600">{statusError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeStatusDialog} disabled={isUpdatingStatus}>
+              Cancel
+            </Button>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleUpdateStatus()} disabled={isUpdatingStatus}>
+              {isUpdatingStatus ? "Updating..." : "Update Status"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -483,8 +658,8 @@ export function DistributionDashboard() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
-                          title="Assign Driver (Step 6)"
-                          disabled
+                          title="Assign Driver"
+                          onClick={() => openAssignDialog(order)}
                         >
                           <UserPlus className="h-4 w-4" />
                         </Button>
@@ -492,8 +667,8 @@ export function DistributionDashboard() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                          title="Update Status (Step 6)"
-                          disabled
+                          title="Update Status"
+                          onClick={() => openStatusDialog(order)}
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>

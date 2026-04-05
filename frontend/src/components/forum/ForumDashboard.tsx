@@ -1,17 +1,21 @@
-import React from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, Pencil, Trash2, ChevronsUpDown, Droplets, Truck, Package, ShieldCheck } from "lucide-react"
+import React, { useMemo } from "react"
+import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, Pencil, Trash2, ChevronsUpDown, MessageSquareReply } from "lucide-react"
 import {
   selectForumState,
-  selectVisibleForumThreads,
-  setCategoryFilter,
+  clearReplyDraft,
   setPeriodFilter,
   setSearchQuery,
+  setStatusFilter,
   setTagFilter,
-  submitReply,
   toggleExpandThread,
   updateReplyDraft,
-  type ForumTag,
 } from "@/features/forum/forumSlice"
+import {
+  type ForumThread,
+  useCreateForumReplyMutation,
+  useGetForumRepliesQuery,
+  useGetForumThreadsQuery,
+} from "@/features/forum/forumApi"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 
 import { Input } from "@/components/ui/input"
@@ -32,23 +36,61 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const getTagIcon = (tag: ForumTag) => {
-  switch (tag.toLowerCase()) {
-    case "water": return <Droplets className="h-4.5 w-4.5 text-[#0F392B]" />;
-    case "distributions": return <Truck className="h-4.5 w-4.5 text-[#0F392B]" />;
-    case "inventory": return <Package className="h-4.5 w-4.5 text-[#0F392B]" />;
-    case "quality": return <ShieldCheck className="h-4.5 w-4.5 text-[#0F392B]" />;
-    default: return <Droplets className="h-4.5 w-4.5 text-[#0F392B]" />;
-  }
-}
-
 export function ForumDashboard() {
   const dispatch = useAppDispatch()
-  const threads = useAppSelector(selectVisibleForumThreads)
-  const { expandedThreadIds, searchQuery, categoryFilter, tagFilter, periodFilter, replyDraftByThreadId } = useAppSelector(selectForumState)
+  const { expandedThreadIds, searchQuery, tagFilter, statusFilter, periodFilter, replyDraftByThreadId } = useAppSelector(selectForumState)
+  const [createReply, { isLoading: isReplySubmitting }] = useCreateForumReplyMutation()
+
+  const threadQueryParams = useMemo(() => {
+    const hasSearch = searchQuery.trim().length > 0
+    const hasTag = tagFilter === "all"
+    const hasStatus = statusFilter === "all"
+
+    return {
+      page: 1,
+      limit: 10,
+      ...(hasSearch ? { search: searchQuery.trim() } : {}),
+      ...(hasTag ? {} : { tag: tagFilter }),
+      ...(hasStatus ? {} : { status: statusFilter }),
+    }
+  }, [searchQuery, statusFilter, tagFilter])
+
+  const {
+    data: threadResult,
+    isLoading: isThreadsLoading,
+    isFetching: isThreadsFetching,
+    isError: isThreadsError,
+    refetch: refetchThreads,
+  } = useGetForumThreadsQuery(threadQueryParams)
+
+  const threads = useMemo(() => threadResult?.threads ?? [], [threadResult?.threads])
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>()
+    for (const thread of threads) {
+      for (const tag of thread.tags ?? []) {
+        tagSet.add(tag)
+      }
+    }
+
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b))
+  }, [threads])
 
   const toggleExpand = (id: string) => {
     dispatch(toggleExpandThread(id))
+  }
+
+  const submitReply = async (threadId: string) => {
+    const content = replyDraftByThreadId[threadId]?.trim()
+    if (!content) {
+      return
+    }
+
+    try {
+      await createReply({ threadId, content }).unwrap()
+      dispatch(clearReplyDraft({ threadId }))
+    } catch {
+      // Backend validation/auth errors are surfaced in network tooling for now.
+    }
   }
 
   return (
@@ -86,28 +128,26 @@ export function ForumDashboard() {
             />
           </div>
 
-          <Select value={categoryFilter} onValueChange={(value) => dispatch(setCategoryFilter(value as "all" | "alerts" | "projects" | "training"))}>
+          <Select value={statusFilter} onValueChange={(value) => dispatch(setStatusFilter(value as "all" | "Open" | "Closed"))}>
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
-              <SelectValue placeholder="All Category" />
+              <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Category</SelectItem>
-              <SelectItem value="alerts">Alerts</SelectItem>
-              <SelectItem value="projects">Projects</SelectItem>
-              <SelectItem value="training">Training</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="Open">Open</SelectItem>
+              <SelectItem value="Closed">Closed</SelectItem>
             </SelectContent>
           </Select>
 
-          <Select value={tagFilter} onValueChange={(value) => dispatch(setTagFilter(value as "all" | ForumTag))}>
+          <Select value={tagFilter} onValueChange={(value) => dispatch(setTagFilter(value))}>
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Tags" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Tags</SelectItem>
-              <SelectItem value="water">Water</SelectItem>
-              <SelectItem value="distributions">Distributions</SelectItem>
-              <SelectItem value="inventory">Inventory</SelectItem>
-              <SelectItem value="quality">Quality</SelectItem>
+              {availableTags.map((tag) => (
+                <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -143,11 +183,39 @@ export function ForumDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {isThreadsLoading && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-500">
+                  Loading forum threads...
+                </TableCell>
+              </TableRow>
+            )}
+
+            {!isThreadsLoading && isThreadsError && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-red-500">
+                  Unable to load forum threads.
+                  <Button variant="link" className="ml-1 h-auto p-0 text-red-500" onClick={() => refetchThreads()}>
+                    Retry
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+
+            {!isThreadsLoading && !isThreadsError && threads.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-500">
+                  No threads found.
+                </TableCell>
+              </TableRow>
+            )}
+
             {threads.map((thread) => {
-              const isExpanded = expandedThreadIds.includes(thread.id);
+              const isExpanded = expandedThreadIds.includes(thread._id);
+              const primaryTag = thread.tags?.[0] ?? "discussion"
 
               return (
-                <React.Fragment key={thread.id}>
+                <React.Fragment key={thread._id}>
                   <TableRow 
                     className={`group transition-colors border-b ${
                       isExpanded 
@@ -157,15 +225,15 @@ export function ForumDashboard() {
                   >
                     <TableCell className="pl-4 py-4">
                       <button 
-                        onClick={() => toggleExpand(thread.id)} 
+                        onClick={() => toggleExpand(thread._id)} 
                         className="flex items-center gap-3 text-left w-full focus:outline-none group"
                       >
                         <ChevronRight className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
                           isExpanded ? "rotate-90 text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
                         }`} />
                         
-                        <div className="h-9.5 w-9.5 shrink-0 rounded-full bg-[#c7f7d4] flex items-center justify-center">
-                          {getTagIcon(thread.tag)}
+                        <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] uppercase tracking-wide text-emerald-700">
+                          {primaryTag}
                         </div>
 
                         <div className="flex flex-col max-w-50 sm:max-w-62.5 md:max-w-[320px]">
@@ -173,7 +241,7 @@ export function ForumDashboard() {
                             {thread.title}
                           </span>
                           <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
-                            <span className="capitalize text-gray-700 mr-1">{thread.tag}</span> • {thread.content}
+                            <span className="capitalize text-gray-700 mr-1">{primaryTag}</span> • {thread.content}
                           </span>
                         </div>
                       </button>
@@ -187,13 +255,13 @@ export function ForumDashboard() {
                       </span>
                     </TableCell>
                     <TableCell className="py-4">
-                      {thread.status === "Completed" ? (
+                      {thread.status === "Closed" ? (
                         <span className="inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold bg-[#ebf8ee] text-[#4dbd74] whitespace-nowrap">
-                          Completed
+                          Closed
                         </span>
                       ) : (
                         <span className="inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold bg-red-50 text-red-500 whitespace-nowrap">
-                          Pending
+                          Open
                         </span>
                       )}
                     </TableCell>
@@ -213,89 +281,138 @@ export function ForumDashboard() {
                   {isExpanded && (
                     <TableRow className="bg-emerald-50/5 border-b border-gray-100 hover:bg-emerald-50/5">
                       <TableCell colSpan={6} className="p-0">
-                        <div className="bg-emerald-50/20 border-t border-emerald-100/50">
-                          {thread.replies && thread.replies.length > 0 ? (
-                            <Table className="w-full text-left">
-                              <TableHeader>
-                                <TableRow className="border-b border-emerald-100/50 hover:bg-transparent">
-                                  <TableHead className="text-gray-500 font-semibold text-xs w-[50%] py-2 pl-12">Reply Content</TableHead>
-                                  <TableHead className="text-gray-500 font-semibold text-xs w-[20%] py-2">Author</TableHead>
-                                  <TableHead className="text-gray-500 font-semibold text-xs w-[20%] py-2">Date/Time</TableHead>
-                                  <TableHead className="text-gray-500 font-semibold text-xs w-24 text-right pr-6 py-2">Actions</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {thread.replies.map((reply) => {
-                                  const date = new Date(reply.createdAt);
-                                  const formattedDate = date.toLocaleDateString("en-US", { month: 'short', day: 'numeric' })
-                                  const formattedTime = date.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })
-                                  
-                                  return (
-                                    <TableRow key={reply.id} className="hover:bg-emerald-50/40 border-b border-emerald-50/50">
-                                      <TableCell className="py-3 pl-12 relative overflow-hidden">
-                                        <div className="absolute left-6 top-0 bottom-0 w-px bg-emerald-200"></div>
-                                        <div className="absolute left-6 top-1/2 w-4 h-px bg-emerald-200 -mt-px"></div>
-                                        <p className="text-sm text-gray-700 leading-relaxed max-w-xl pr-4">
-                                          {reply.content}
-                                        </p>
-                                      </TableCell>
-                                      <TableCell className="text-sm font-medium text-gray-900 py-3">
-                                        {reply.author}
-                                      </TableCell>
-                                      <TableCell className="py-3">
-                                        <div className="text-sm text-gray-600">{formattedDate}</div>
-                                        <div className="text-xs text-gray-400 mt-0.5">{formattedTime}</div>
-                                      </TableCell>
-                                      <TableCell className="text-right pr-6 py-3">
-                                        <div className="flex items-center justify-end gap-1">
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50">
-                                            <Pencil className="h-4 w-4" />
-                                          </Button>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50">
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </TableCell>
-                                    </TableRow>
-                                  )
-                                })}
-                              </TableBody>
-                            </Table>
-                          ) : (
-                            <div className="p-6 text-center border-b border-emerald-100/50">
-                              <p className="text-sm text-gray-500">No replies yet for this thread.</p>
-                            </div>
-                          )}
-                          
-                          {/* Reply Input Box */}
-                          <div className="px-12 py-4 flex gap-3 relative">
-                             <div className="absolute left-6 top-0 bottom-0 w-px bg-emerald-200"></div>
-                             <div className="absolute left-6 top-7 w-4 h-px bg-emerald-200 -mt-px"></div>
-                             <Input
-                               placeholder="Type your reply..."
-                               value={replyDraftByThreadId[thread.id] ?? ""}
-                               onChange={(event) =>
-                                 dispatch(updateReplyDraft({ threadId: thread.id, value: event.target.value }))
-                               }
-                               className="bg-white border-emerald-200 focus-visible:ring-emerald-500 h-10 shadow-sm"
-                             />
-                             <Button
-                               className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white h-10 shrink-0 px-6 font-medium"
-                               disabled={!(replyDraftByThreadId[thread.id] ?? "").trim()}
-                               onClick={() => dispatch(submitReply({ threadId: thread.id }))}
-                             >
-                               Reply
-                             </Button>
-                          </div>
-                        </div>
+                        <ThreadRepliesPanel
+                          thread={thread}
+                          draftValue={replyDraftByThreadId[thread._id] ?? ""}
+                          isSubmittingReply={isReplySubmitting}
+                          onDraftChange={(value) =>
+                            dispatch(updateReplyDraft({ threadId: thread._id, value }))
+                          }
+                          onSubmit={() => submitReply(thread._id)}
+                        />
                       </TableCell>
                     </TableRow>
                   )}
                 </React.Fragment>
               )
             })}
+
+            {isThreadsFetching && !isThreadsLoading && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-3 text-center text-xs text-gray-500">
+                  Refreshing...
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
+      </div>
+    </div>
+  )
+}
+
+interface ThreadRepliesPanelProps {
+  readonly thread: ForumThread
+  readonly draftValue: string
+  readonly isSubmittingReply: boolean
+  readonly onDraftChange: (value: string) => void
+  readonly onSubmit: () => void
+}
+
+function ThreadRepliesPanel({
+  thread,
+  draftValue,
+  isSubmittingReply,
+  onDraftChange,
+  onSubmit,
+}: ThreadRepliesPanelProps) {
+  const {
+    data: repliesResult,
+    isLoading,
+    isError,
+  } = useGetForumRepliesQuery({ threadId: thread._id, page: 1, limit: 20 })
+
+  const replies = repliesResult?.replies ?? []
+
+  return (
+    <div className="bg-emerald-50/20 border-t border-emerald-100/50">
+      <div className="px-10 py-6">
+        <div className="mb-4 flex items-center gap-2">
+          <MessageSquareReply className="h-4 w-4 text-emerald-700" />
+          <h3 className="text-sm font-semibold text-gray-900">
+            Thread Replies ({thread.replyCount})
+          </h3>
+        </div>
+
+        {isLoading && (
+          <div className="rounded-xl border border-gray-100 bg-white p-6 text-center text-sm text-gray-500">
+            Loading replies...
+          </div>
+        )}
+
+        {!isLoading && isError && (
+          <div className="rounded-xl border border-red-100 bg-red-50 p-6 text-center text-sm text-red-500">
+            Unable to load replies for this thread.
+          </div>
+        )}
+
+        {!isLoading && !isError && replies.length === 0 && (
+          <div className="rounded-xl border border-dashed border-gray-100 bg-gray-50 p-6 text-center">
+            <p className="text-sm text-gray-500">No replies yet for this thread.</p>
+          </div>
+        )}
+
+        {!isLoading && !isError && replies.length > 0 && (
+          <div className="space-y-4">
+            {replies.map((reply) => {
+              const date = new Date(reply.createdAt)
+              const formattedDate = date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })
+              const formattedTime = date.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
+
+              return (
+                <div
+                  key={reply._id}
+                  className="relative ml-2 rounded-xl border border-gray-100 border-l-[3px] border-l-emerald-600 bg-white p-4 pl-4 shadow-sm before:absolute before:-left-4 before:top-6 before:h-px before:w-4 before:bg-gray-200"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {reply.author?.name ?? "Unknown"}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {formattedDate} at {formattedTime}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-gray-600">
+                    {reply.content}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="mt-4 ml-2 flex gap-3">
+          <Input
+            placeholder="Type your reply..."
+            value={draftValue}
+            onChange={(event) => onDraftChange(event.target.value)}
+            className="border-gray-200 bg-white focus-visible:ring-emerald-500"
+          />
+          <Button
+            className="shrink-0 bg-[#0F392B] text-white hover:bg-[#0F392B]/90"
+            disabled={!draftValue.trim() || isSubmittingReply}
+            onClick={onSubmit}
+          >
+            {isSubmittingReply ? "Sending..." : "Reply"}
+          </Button>
+        </div>
       </div>
     </div>
   )

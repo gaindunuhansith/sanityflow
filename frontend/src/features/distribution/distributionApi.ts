@@ -50,7 +50,7 @@ export interface BeneficiaryItem {
 
 export interface DistributionOrder {
   _id: string
-  resource: string
+  resource: ResourceItem | string
   quantity: number
   targetLocation: string
   beneficiaries?: Array<BeneficiaryItem | string>

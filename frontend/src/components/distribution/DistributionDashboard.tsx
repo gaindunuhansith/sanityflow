@@ -86,9 +86,16 @@ const getCreatedByName = (order: DistributionOrder) => {
   return "Unknown"
 }
 
-const getResourceLabel = (order: DistributionOrder) => {
+const getResourceLabel = (order: DistributionOrder, resourceNameById: Map<string, string>) => {
   if (typeof order.resource === "string") {
-    return order.resource
+    return resourceNameById.get(order.resource) ?? order.resource
+  }
+
+  if (order.resource && typeof order.resource === "object" && "name" in order.resource) {
+    const maybeName = (order.resource as { name?: unknown }).name
+    if (typeof maybeName === "string" && maybeName.trim().length > 0) {
+      return maybeName
+    }
   }
 
   return "Resource"
@@ -104,12 +111,12 @@ const getOrderBeneficiaryIds = (order: DistributionOrder) => {
   })
 }
 
-const getOrderBeneficiaryLabels = (order: DistributionOrder) => {
+const getOrderBeneficiaryLabels = (order: DistributionOrder, beneficiaryLabelById: Map<string, string>) => {
   const beneficiaries = order.beneficiaries ?? []
 
   return beneficiaries.map((beneficiary) => {
     if (typeof beneficiary === "string") {
-      return beneficiary
+      return beneficiaryLabelById.get(beneficiary) ?? `Beneficiary ${beneficiary.slice(-6)}`
     }
 
     return `${beneficiary.name} (${beneficiary.location})`
@@ -189,6 +196,16 @@ export function DistributionDashboard() {
   const [updateDeliveryStatus, { isLoading: isUpdatingStatus }] = useUpdateDeliveryStatusMutation()
   const [deleteDistributionOrder, { isLoading: isDeletingOrder }] = useDeleteDistributionOrderMutation()
 
+  const resourceNameById = useMemo(() => {
+    return new Map(resources.map((resource) => [resource._id, resource.name]))
+  }, [resources])
+
+  const beneficiaryLabelById = useMemo(() => {
+    return new Map(
+      beneficiaries.map((beneficiary) => [beneficiary._id, `${beneficiary.name} (${beneficiary.location})`])
+    )
+  }, [beneficiaries])
+
   const filteredOrders = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
 
@@ -200,7 +217,7 @@ export function DistributionDashboard() {
       const targetLocation = order.targetLocation.toLowerCase()
       const notes = (order.notes ?? "").toLowerCase()
       const driverName = getDriverName(order).toLowerCase()
-      const resourceText = getResourceLabel(order).toLowerCase()
+      const resourceText = getResourceLabel(order, resourceNameById).toLowerCase()
 
       return (
         order._id.toLowerCase().includes(normalizedSearch) ||
@@ -210,7 +227,7 @@ export function DistributionDashboard() {
         resourceText.includes(normalizedSearch)
       )
     })
-  }, [orders, searchText])
+  }, [orders, searchText, resourceNameById])
 
   const availableDrivers = useMemo(() => {
     return drivers
@@ -308,6 +325,8 @@ export function DistributionDashboard() {
         ...(notes ? { notes } : {}),
       }).unwrap()
 
+      await refetch()
+
       dispatch(setCreateDialogOpen(false))
       resetCreateForm()
     } catch (error) {
@@ -397,6 +416,8 @@ export function DistributionDashboard() {
         id: selectedOrderIdForBeneficiaries,
         beneficiaries: updateBeneficiaryIds,
       }).unwrap()
+
+      await refetch()
 
       closeBeneficiariesDialog()
     } catch (error) {
@@ -875,7 +896,7 @@ export function DistributionDashboard() {
                 month: "short",
                 day: "numeric",
               })
-              const beneficiaryLabels = getOrderBeneficiaryLabels(order)
+              const beneficiaryLabels = getOrderBeneficiaryLabels(order, beneficiaryLabelById)
               const beneficiarySummary =
                 beneficiaryLabels.length > 0
                   ? beneficiaryLabels.slice(0, 2).join(", ")
@@ -908,7 +929,7 @@ export function DistributionDashboard() {
                             {order._id}
                           </span>
                           <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
-                            {getResourceLabel(order)} | {createdAt}
+                            {getResourceLabel(order, resourceNameById)} | {createdAt}
                           </span>
                           <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
                             {beneficiarySummary}
@@ -995,7 +1016,7 @@ export function DistributionDashboard() {
                             {beneficiaryLabels.length > 0 ? (
                               <div className="flex flex-wrap gap-2">
                                 {beneficiaryLabels.map((label) => (
-                                  <span key={label} className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium px-2.5 py-1">
+                                  <span key={`${order._id}-${label}`} className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium px-2.5 py-1">
                                     {label}
                                   </span>
                                 ))}

@@ -53,7 +53,11 @@ export const createDistributionOrder = async (data: {
     reason: `Distribution order ${order._id} created`
   });
 
-  return order;
+  return await DistributionOrder.findById(order._id)
+    .populate('resource', 'name unit category')
+    .populate('driver', 'name email')
+    .populate('createdBy', 'name email')
+    .populate('beneficiaries', 'name location eligibilityStatus');
 };
 
 export const getAllDistributionOrders = async (filters?: {
@@ -68,6 +72,7 @@ export const getAllDistributionOrders = async (filters?: {
   if (filters?.beneficiary) query.beneficiaries = filters.beneficiary;
   
   return await DistributionOrder.find(query)
+    .populate('resource', 'name unit category')
     .populate('driver', 'name email')
     .populate('createdBy', 'name email')
     .populate('beneficiaries', 'name location eligibilityStatus')
@@ -80,6 +85,7 @@ export const getDistributionOrderById = async (id: string) => {
   }
   
   const order = await DistributionOrder.findById(id)
+    .populate('resource', 'name unit category')
     .populate('driver', 'name email')
     .populate('createdBy', 'name email')
     .populate('beneficiaries', 'name location eligibilityStatus');
@@ -118,7 +124,8 @@ export const updateDistributionOrder = async (
     id,
     updateData,
     { new: true, runValidators: true }
-  ).populate<{ driver: { _id: mongoose.Types.ObjectId; name: string; email: string } | null }>('driver', 'name email')
+  ).populate('resource', 'name unit category')
+    .populate<{ driver: { _id: mongoose.Types.ObjectId; name: string; email: string } | null }>('driver', 'name email')
     .populate('createdBy', 'name email')
     .populate('beneficiaries', 'name location eligibilityStatus');
   
@@ -149,7 +156,8 @@ export const updateDeliveryStatus = async (id: string, status: string) => {
     id,
     { status },
     { new: true, runValidators: true }
-  ).populate('driver', 'name email')
+  ).populate('resource', 'name unit category')
+   .populate('driver', 'name email')
    .populate<{ createdBy: { _id: mongoose.Types.ObjectId; name: string; email: string } }>('createdBy', 'name email')
    .populate('beneficiaries', 'name location eligibilityStatus');
   

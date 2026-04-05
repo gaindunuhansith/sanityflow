@@ -37,6 +37,7 @@ import {
   type Beneficiary,
   type BeneficiaryEligibilityStatus,
 } from "@/features/beneficiary/beneficiaryApi"
+import { distributionApi } from "@/features/distribution/distributionApi"
 import {
   collapseBeneficiary,
   clearBeneficiaryFilters,
@@ -244,6 +245,8 @@ export function BeneficiaryDashboard() {
         eligibilityStatus: createEligibilityStatus,
       }).unwrap()
 
+      dispatch(distributionApi.util.invalidateTags([{ type: "Beneficiary", id: "LIST" }]))
+
       dispatch(setBeneficiaryCreateDialogOpen(false))
       resetCreateForm()
     } catch (error) {
@@ -306,6 +309,8 @@ export function BeneficiaryDashboard() {
         eligibilityStatus: editEligibilityStatus,
       }).unwrap()
 
+      dispatch(distributionApi.util.invalidateTags([{ type: "Beneficiary", id: "LIST" }]))
+
       closeEditDialog()
     } catch (error) {
       setEditFormError(getApiErrorMessage(error))
@@ -332,6 +337,7 @@ export function BeneficiaryDashboard() {
 
     try {
       await deleteBeneficiary(selectedBeneficiaryIdForDelete).unwrap()
+      dispatch(distributionApi.util.invalidateTags([{ type: "Beneficiary", id: "LIST" }]))
       dispatch(collapseBeneficiary(selectedBeneficiaryIdForDelete))
       closeDeleteDialog()
     } catch (error) {

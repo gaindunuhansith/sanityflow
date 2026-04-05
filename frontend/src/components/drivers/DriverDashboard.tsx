@@ -33,6 +33,7 @@ import {
   useGetDriversQuery,
   useCreateDriverMutation,
   useUpdateDriverMutation,
+  useDeleteDriverMutation,
   type Driver,
   type DriverAvailability,
 } from "@/features/driver/driverApi"
@@ -41,6 +42,7 @@ import {
   setAvailabilityFilter,
   clearDriverFilters,
   toggleExpandedDriver,
+  collapseDriver,
   setDriverCreateDialogOpen,
   setSelectedDriverIdForEdit,
   setSelectedDriverIdForDelete,
@@ -106,12 +108,14 @@ export function DriverDashboard() {
   const [editAssignedArea, setEditAssignedArea] = useState("")
   const [editAvailability, setEditAvailability] = useState<DriverAvailability>("Active")
   const [editFormError, setEditFormError] = useState("")
+  const [deleteFormError, setDeleteFormError] = useState("")
   const {
     searchText,
     availabilityFilter,
     expandedDriverIds,
     isCreateDialogOpen,
     selectedDriverIdForEdit,
+    selectedDriverIdForDelete,
   } = useSelector((state: RootState) => state.driver)
 
   const queryParams = useMemo(() => {
@@ -128,6 +132,7 @@ export function DriverDashboard() {
   } = useGetDriversQuery(queryParams)
   const [createDriver, { isLoading: isCreatingDriver }] = useCreateDriverMutation()
   const [updateDriver, { isLoading: isUpdatingDriver }] = useUpdateDriverMutation()
+  const [deleteDriver, { isLoading: isDeletingDriver }] = useDeleteDriverMutation()
 
   const filteredDrivers = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
@@ -150,6 +155,11 @@ export function DriverDashboard() {
   const selectedEditDriver = useMemo(
     () => drivers.find((driver) => driver._id === selectedDriverIdForEdit) ?? null,
     [drivers, selectedDriverIdForEdit]
+  )
+
+  const selectedDeleteDriver = useMemo(
+    () => drivers.find((driver) => driver._id === selectedDriverIdForDelete) ?? null,
+    [drivers, selectedDriverIdForDelete]
   )
 
   const openCreateDialog = () => {
@@ -271,7 +281,30 @@ export function DriverDashboard() {
   }
 
   const openDeleteDialog = (driverId: string) => {
+    setDeleteFormError("")
     dispatch(setSelectedDriverIdForDelete(driverId))
+  }
+
+  const closeDeleteDialog = () => {
+    dispatch(setSelectedDriverIdForDelete(null))
+    setDeleteFormError("")
+  }
+
+  const handleDeleteDriver = async () => {
+    if (!selectedDriverIdForDelete) {
+      setDeleteFormError("Driver is not selected.")
+      return
+    }
+
+    setDeleteFormError("")
+
+    try {
+      await deleteDriver(selectedDriverIdForDelete).unwrap()
+      dispatch(collapseDriver(selectedDriverIdForDelete))
+      closeDeleteDialog()
+    } catch (error) {
+      setDeleteFormError(getApiErrorMessage(error))
+    }
   }
 
   return (
@@ -431,6 +464,28 @@ export function DriverDashboard() {
             </Button>
             <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleUpdateDriver()} disabled={isUpdatingDriver}>
               {isUpdatingDriver ? "Updating..." : "Update Driver"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedDriverIdForDelete)} onOpenChange={(isOpen) => { if (!isOpen) closeDeleteDialog() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Driver</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Delete driver {selectedDeleteDriver?.name ?? "selected driver"}?
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteFormError && <p className="text-sm text-red-600">{deleteFormError}</p>}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteDialog} disabled={isDeletingDriver}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => void handleDeleteDriver()} disabled={isDeletingDriver}>
+              {isDeletingDriver ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

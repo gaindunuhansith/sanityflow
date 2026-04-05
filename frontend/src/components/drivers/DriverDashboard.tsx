@@ -32,6 +32,7 @@ import type { AppDispatch, RootState } from "@/store"
 import {
   useGetDriversQuery,
   useCreateDriverMutation,
+  useUpdateDriverMutation,
   type Driver,
   type DriverAvailability,
 } from "@/features/driver/driverApi"
@@ -98,11 +99,19 @@ export function DriverDashboard() {
   const [createAssignedArea, setCreateAssignedArea] = useState("")
   const [createAvailability, setCreateAvailability] = useState<DriverAvailability>("Active")
   const [createFormError, setCreateFormError] = useState("")
+  const [editName, setEditName] = useState("")
+  const [editEmail, setEditEmail] = useState("")
+  const [editContact, setEditContact] = useState("")
+  const [editVehicleInfo, setEditVehicleInfo] = useState("")
+  const [editAssignedArea, setEditAssignedArea] = useState("")
+  const [editAvailability, setEditAvailability] = useState<DriverAvailability>("Active")
+  const [editFormError, setEditFormError] = useState("")
   const {
     searchText,
     availabilityFilter,
     expandedDriverIds,
     isCreateDialogOpen,
+    selectedDriverIdForEdit,
   } = useSelector((state: RootState) => state.driver)
 
   const queryParams = useMemo(() => {
@@ -118,6 +127,7 @@ export function DriverDashboard() {
     refetch,
   } = useGetDriversQuery(queryParams)
   const [createDriver, { isLoading: isCreatingDriver }] = useCreateDriverMutation()
+  const [updateDriver, { isLoading: isUpdatingDriver }] = useUpdateDriverMutation()
 
   const filteredDrivers = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
@@ -136,6 +146,11 @@ export function DriverDashboard() {
       )
     })
   }, [drivers, searchText])
+
+  const selectedEditDriver = useMemo(
+    () => drivers.find((driver) => driver._id === selectedDriverIdForEdit) ?? null,
+    [drivers, selectedDriverIdForEdit]
+  )
 
   const openCreateDialog = () => {
     dispatch(setDriverCreateDialogOpen(true))
@@ -199,7 +214,60 @@ export function DriverDashboard() {
   }
 
   const openEditDialog = (driverId: string) => {
+    const target = drivers.find((driver) => driver._id === driverId)
+    if (!target) {
+      return
+    }
+
+    setEditName(target.name)
+    setEditEmail(target.email)
+    setEditContact(target.contact)
+    setEditVehicleInfo(target.vehicleInfo)
+    setEditAssignedArea(target.assignedArea)
+    setEditAvailability(target.availability)
+    setEditFormError("")
     dispatch(setSelectedDriverIdForEdit(driverId))
+  }
+
+  const closeEditDialog = () => {
+    dispatch(setSelectedDriverIdForEdit(null))
+    setEditFormError("")
+  }
+
+  const handleUpdateDriver = async () => {
+    if (!selectedDriverIdForEdit) {
+      setEditFormError("Driver is not selected.")
+      return
+    }
+
+    const name = editName.trim()
+    const email = editEmail.trim()
+    const contact = editContact.trim()
+    const vehicleInfo = editVehicleInfo.trim()
+    const assignedArea = editAssignedArea.trim()
+
+    if (!name || !email || !contact || !vehicleInfo || !assignedArea) {
+      setEditFormError("All fields are required.")
+      return
+    }
+
+    setEditFormError("")
+
+    try {
+      await updateDriver({
+        id: selectedDriverIdForEdit,
+        name,
+        email,
+        contact,
+        vehicleInfo,
+        assignedArea,
+        availability: editAvailability,
+      }).unwrap()
+
+      closeEditDialog()
+    } catch (error) {
+      setEditFormError(getApiErrorMessage(error))
+    }
   }
 
   const openDeleteDialog = (driverId: string) => {
@@ -301,6 +369,68 @@ export function DriverDashboard() {
             </Button>
             <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateDriver()} disabled={isCreatingDriver}>
               {isCreatingDriver ? "Creating..." : "Create Driver"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedDriverIdForEdit)} onOpenChange={(isOpen) => { if (!isOpen) closeEditDialog() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Driver</DialogTitle>
+            <DialogDescription>
+              Update driver profile details for {selectedEditDriver?.name ?? "selected driver"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-driver-name">Name</Label>
+              <Input id="edit-driver-name" value={editName} onChange={(event) => setEditName(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-driver-email">Email</Label>
+              <Input id="edit-driver-email" type="email" value={editEmail} onChange={(event) => setEditEmail(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-driver-contact">Contact</Label>
+              <Input id="edit-driver-contact" value={editContact} onChange={(event) => setEditContact(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-driver-vehicle">Vehicle Info</Label>
+              <Input id="edit-driver-vehicle" value={editVehicleInfo} onChange={(event) => setEditVehicleInfo(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-driver-area">Assigned Area</Label>
+              <Input id="edit-driver-area" value={editAssignedArea} onChange={(event) => setEditAssignedArea(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-driver-availability">Availability</Label>
+              <Select value={editAvailability} onValueChange={(value) => setEditAvailability(value as DriverAvailability)}>
+                <SelectTrigger id="edit-driver-availability" className="w-full">
+                  <SelectValue placeholder="Select availability" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {editFormError && <p className="text-sm text-red-600">{editFormError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog} disabled={isUpdatingDriver}>
+              Cancel
+            </Button>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleUpdateDriver()} disabled={isUpdatingDriver}>
+              {isUpdatingDriver ? "Updating..." : "Update Driver"}
             </Button>
           </DialogFooter>
         </DialogContent>

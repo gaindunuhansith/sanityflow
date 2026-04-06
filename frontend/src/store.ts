@@ -39,14 +39,10 @@ export const store = configureStore({
       authApi.middleware,
       distributionApi.middleware,
       driverApi.middleware,
-
       blogApi.middleware,
-      waterSourceApi.middleware
-
+      waterSourceApi.middleware,
       beneficiaryApi.middleware,
       issueApi.middleware,
-      blogApi.middleware
-
     ),
 })
 

@@ -7,7 +7,7 @@ import {
   deleteWaterTestService,
   getWaterTestAnalyticsService
 } from '../services/waterTest.service.js';
-import { createWaterTestSchema, updateWaterTestSchema, waterTestFilterSchema } from '../validations/waterTest.schema.js';
+import { createWaterTestSchema, updateWaterTestSchema, waterTestFilterSchema } from '../validations/waterTest.schemas.js';
 import { HTTP_STATUS } from '../constants/index.js';
 
 export const createWaterTestController = async (req: Request, res: Response, next: NextFunction) => {

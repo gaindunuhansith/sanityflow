@@ -1,10 +1,11 @@
-import { Fragment, useMemo, useState } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus } from "lucide-react"
+import { Fragment, useEffect, useMemo, useState } from "react"
+import { Search, SlidersHorizontal, Download, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus, Users } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -30,9 +31,11 @@ import {
 } from "@/components/ui/dialog"
 import type { AppDispatch, RootState } from "@/store"
 import {
+  distributionApi,
   useGetDistributionOrdersQuery,
   useGetDriversQuery,
   useGetResourcesQuery,
+  useGetBeneficiariesQuery,
   useCreateDistributionOrderMutation,
   useUpdateDistributionOrderMutation,
   useUpdateDeliveryStatusMutation,
@@ -84,12 +87,41 @@ const getCreatedByName = (order: DistributionOrder) => {
   return "Unknown"
 }
 
-const getResourceLabel = (order: DistributionOrder) => {
+const getResourceLabel = (order: DistributionOrder, resourceNameById: Map<string, string>) => {
   if (typeof order.resource === "string") {
-    return order.resource
+    return resourceNameById.get(order.resource) ?? order.resource
+  }
+
+  if (order.resource && typeof order.resource === "object" && "name" in order.resource) {
+    const maybeName = (order.resource as { name?: unknown }).name
+    if (typeof maybeName === "string" && maybeName.trim().length > 0) {
+      return maybeName
+    }
   }
 
   return "Resource"
+}
+
+const getOrderBeneficiaryIds = (order: DistributionOrder) => {
+  return (order.beneficiaries ?? []).map((beneficiary) => {
+    if (typeof beneficiary === "string") {
+      return beneficiary
+    }
+
+    return beneficiary._id
+  })
+}
+
+const getOrderBeneficiaryLabels = (order: DistributionOrder, beneficiaryLabelById: Map<string, string>) => {
+  const beneficiaries = order.beneficiaries ?? []
+
+  return beneficiaries.map((beneficiary) => {
+    if (typeof beneficiary === "string") {
+      return beneficiaryLabelById.get(beneficiary) ?? `Beneficiary ${beneficiary.slice(-6)}`
+    }
+
+    return `${beneficiary.name} (${beneficiary.location})`
+  })
 }
 
 const getApiErrorMessage = (error: unknown) => {
@@ -116,13 +148,20 @@ const getApiErrorMessage = (error: unknown) => {
 
 export function DistributionDashboard() {
   const dispatch = useDispatch<AppDispatch>()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [createResourceId, setCreateResourceId] = useState("")
   const [createQuantity, setCreateQuantity] = useState("1")
   const [createTargetLocation, setCreateTargetLocation] = useState("")
+  const [createBeneficiaryIds, setCreateBeneficiaryIds] = useState<string[]>([])
   const [createNotes, setCreateNotes] = useState("")
   const [createFormError, setCreateFormError] = useState("")
   const [assignDriverId, setAssignDriverId] = useState("")
   const [assignError, setAssignError] = useState("")
+  const [selectedOrderIdForBeneficiaries, setSelectedOrderIdForBeneficiaries] = useState<string | null>(null)
+  const [updateBeneficiaryIds, setUpdateBeneficiaryIds] = useState<string[]>([])
+  const [beneficiaryLabelsOverrideByOrder, setBeneficiaryLabelsOverrideByOrder] = useState<Record<string, string[]>>({})
+  const [updateBeneficiariesError, setUpdateBeneficiariesError] = useState("")
   const [statusValue, setStatusValue] = useState<"In Transit" | "Delivered" | "Failed">("In Transit")
   const [statusError, setStatusError] = useState("")
   const [deleteError, setDeleteError] = useState("")
@@ -136,50 +175,53 @@ export function DistributionDashboard() {
     selectedOrderIdForStatus,
     selectedOrderIdForDelete,
   } = useSelector((state: RootState) => state.distribution)
+  const [beneficiaryFilter, setBeneficiaryFilter] = useState("all")
 
   const queryParams = useMemo(() => {
     return {
       ...(statusFilter !== "all" ? { status: statusFilter } : {}),
       ...(driverFilter !== "all" ? { driver: driverFilter } : {}),
+      ...(beneficiaryFilter !== "all" ? { beneficiary: beneficiaryFilter } : {}),
+      ...(searchText.trim().length > 0 ? { search: searchText.trim() } : {}),
+      page: currentPage,
+      limit: pageSize,
     }
-  }, [statusFilter, driverFilter])
+  }, [statusFilter, driverFilter, beneficiaryFilter, searchText, currentPage, pageSize])
 
   const {
-    data: orders = [],
+    data: ordersResponse,
     isLoading: isOrdersLoading,
     isError: isOrdersError,
     refetch,
   } = useGetDistributionOrdersQuery(queryParams)
 
+  const orders = ordersResponse?.items ?? []
+  const totalOrders = ordersResponse?.total ?? 0
+  const totalPages = ordersResponse?.totalPages ?? 1
+
   const { data: drivers = [] } = useGetDriversQuery()
   const { data: resources = [], isLoading: isResourcesLoading } = useGetResourcesQuery()
+  const { data: beneficiaries = [], isLoading: isBeneficiariesLoading } = useGetBeneficiariesQuery({ eligibilityStatus: "Active" })
   const [createDistributionOrder, { isLoading: isCreatingOrder }] = useCreateDistributionOrderMutation()
-  const [updateDistributionOrder, { isLoading: isAssigningDriver }] = useUpdateDistributionOrderMutation()
+  const [updateDistributionOrder, { isLoading: isUpdatingOrder }] = useUpdateDistributionOrderMutation()
   const [updateDeliveryStatus, { isLoading: isUpdatingStatus }] = useUpdateDeliveryStatusMutation()
   const [deleteDistributionOrder, { isLoading: isDeletingOrder }] = useDeleteDistributionOrderMutation()
 
-  const filteredOrders = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase()
+  const resourceNameById = useMemo(() => {
+    return new Map(resources.map((resource) => [resource._id, resource.name]))
+  }, [resources])
 
-    return orders.filter((order) => {
-      if (normalizedSearch.length === 0) {
-        return true
-      }
+  const beneficiaryLabelById = useMemo(() => {
+    return new Map(
+      beneficiaries.map((beneficiary) => [beneficiary._id, `${beneficiary.name} (${beneficiary.location})`])
+    )
+  }, [beneficiaries])
 
-      const targetLocation = order.targetLocation.toLowerCase()
-      const notes = (order.notes ?? "").toLowerCase()
-      const driverName = getDriverName(order).toLowerCase()
-      const resourceText = getResourceLabel(order).toLowerCase()
-
-      return (
-        order._id.toLowerCase().includes(normalizedSearch) ||
-        targetLocation.includes(normalizedSearch) ||
-        notes.includes(normalizedSearch) ||
-        driverName.includes(normalizedSearch) ||
-        resourceText.includes(normalizedSearch)
-      )
-    })
-  }, [orders, searchText])
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   const availableDrivers = useMemo(() => {
     return drivers
@@ -200,6 +242,11 @@ export function DistributionDashboard() {
     [orders, selectedOrderIdForStatus]
   )
 
+  const selectedBeneficiariesOrder = useMemo(
+    () => orders.find((order) => order._id === selectedOrderIdForBeneficiaries) ?? null,
+    [orders, selectedOrderIdForBeneficiaries]
+  )
+
   const selectedDeleteOrder = useMemo(
     () => orders.find((order) => order._id === selectedOrderIdForDelete) ?? null,
     [orders, selectedOrderIdForDelete]
@@ -209,8 +256,23 @@ export function DistributionDashboard() {
     setCreateResourceId("")
     setCreateQuantity("1")
     setCreateTargetLocation("")
+    setCreateBeneficiaryIds([])
     setCreateNotes("")
     setCreateFormError("")
+  }
+
+  const toggleCreateBeneficiary = (beneficiaryId: string) => {
+    if (createFormError) {
+      setCreateFormError("")
+    }
+
+    setCreateBeneficiaryIds((current) => {
+      if (current.includes(beneficiaryId)) {
+        return current.filter((id) => id !== beneficiaryId)
+      }
+
+      return [...current, beneficiaryId]
+    })
   }
 
   const handleCreateDialogChange = (isOpen: boolean) => {
@@ -241,6 +303,11 @@ export function DistributionDashboard() {
       return
     }
 
+    if (createBeneficiaryIds.length === 0) {
+      setCreateFormError("Please select at least one beneficiary.")
+      return
+    }
+
     setCreateFormError("")
 
     try {
@@ -248,8 +315,11 @@ export function DistributionDashboard() {
         resource: createResourceId,
         quantity: parsedQuantity,
         targetLocation,
+        ...(createBeneficiaryIds.length > 0 ? { beneficiaries: createBeneficiaryIds } : {}),
         ...(notes ? { notes } : {}),
       }).unwrap()
+
+      await refetch()
 
       dispatch(setCreateDialogOpen(false))
       resetCreateForm()
@@ -293,6 +363,96 @@ export function DistributionDashboard() {
       closeAssignDialog()
     } catch (error) {
       setAssignError(getApiErrorMessage(error))
+    }
+  }
+
+  const toggleUpdateBeneficiary = (beneficiaryId: string) => {
+    if (updateBeneficiariesError) {
+      setUpdateBeneficiariesError("")
+    }
+
+    setUpdateBeneficiaryIds((current) => {
+      if (current.includes(beneficiaryId)) {
+        return current.filter((id) => id !== beneficiaryId)
+      }
+
+      return [...current, beneficiaryId]
+    })
+  }
+
+  const openBeneficiariesDialog = (order: DistributionOrder) => {
+    setSelectedOrderIdForBeneficiaries(order._id)
+    setUpdateBeneficiaryIds(getOrderBeneficiaryIds(order))
+    setUpdateBeneficiariesError("")
+  }
+
+  const closeBeneficiariesDialog = () => {
+    setSelectedOrderIdForBeneficiaries(null)
+    setUpdateBeneficiaryIds([])
+    setUpdateBeneficiariesError("")
+  }
+
+  const handleUpdateBeneficiaries = async () => {
+    if (!selectedOrderIdForBeneficiaries) {
+      setUpdateBeneficiariesError("Order is not selected.")
+      return
+    }
+
+    if (updateBeneficiaryIds.length === 0) {
+      setUpdateBeneficiariesError("Please select at least one beneficiary.")
+      return
+    }
+
+    setUpdateBeneficiariesError("")
+
+    const selectedLabels = beneficiaries
+      .filter((beneficiary) => updateBeneficiaryIds.includes(beneficiary._id))
+      .map((beneficiary) => `${beneficiary.name} (${beneficiary.location})`)
+
+    const fallbackLabels =
+      selectedLabels.length > 0
+        ? selectedLabels
+        : updateBeneficiaryIds.map((id) => beneficiaryLabelById.get(id) ?? `Beneficiary ${id.slice(-6)}`)
+
+    try {
+      await updateDistributionOrder({
+        id: selectedOrderIdForBeneficiaries,
+        beneficiaries: updateBeneficiaryIds,
+      }).unwrap()
+
+      setBeneficiaryLabelsOverrideByOrder((current) => ({
+        ...current,
+        [selectedOrderIdForBeneficiaries]: fallbackLabels,
+      }))
+
+      // Keep table UI in sync immediately after assignment.
+      dispatch(
+        distributionApi.util.updateQueryData("getDistributionOrders", queryParams, (draft) => {
+          const targetOrder = draft.items.find((order) => order._id === selectedOrderIdForBeneficiaries)
+          if (!targetOrder) {
+            return
+          }
+
+          targetOrder.beneficiaries = beneficiaries
+            .filter((beneficiary) => updateBeneficiaryIds.includes(beneficiary._id))
+            .map((beneficiary) => ({
+              _id: beneficiary._id,
+              name: beneficiary.name,
+              location: beneficiary.location,
+              familySize: beneficiary.familySize,
+              contact: beneficiary.contact,
+              eligibilityStatus: beneficiary.eligibilityStatus,
+              createdAt: beneficiary.createdAt,
+              updatedAt: beneficiary.updatedAt,
+            }))
+        })
+      )
+
+      await refetch()
+
+      closeBeneficiariesDialog()
+    } catch (error) {
+      setUpdateBeneficiariesError(getApiErrorMessage(error))
     }
   }
 
@@ -438,6 +598,37 @@ export function DistributionDashboard() {
               />
             </div>
             <div className="space-y-2">
+              <Label>Beneficiaries</Label>
+              <div className="max-h-40 overflow-auto rounded-md border border-gray-200 px-3 py-2 space-y-2">
+                {isBeneficiariesLoading && (
+                  <p className="text-xs text-gray-500">Loading beneficiaries...</p>
+                )}
+
+                {!isBeneficiariesLoading && beneficiaries.length === 0 && (
+                  <p className="text-xs text-gray-500">No active beneficiaries found.</p>
+                )}
+
+                {!isBeneficiariesLoading && beneficiaries.map((beneficiary) => {
+                  const checked = createBeneficiaryIds.includes(beneficiary._id)
+
+                  return (
+                    <label key={beneficiary._id} className="flex items-start gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => toggleCreateBeneficiary(beneficiary._id)}
+                      />
+                      <span className="text-sm text-gray-700">
+                        {beneficiary.name} ({beneficiary.location})
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-gray-500">
+                Selected: {createBeneficiaryIds.length} (minimum 1)
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Input
                 id="notes"
@@ -454,7 +645,7 @@ export function DistributionDashboard() {
             <Button variant="outline" onClick={() => handleCreateDialogChange(false)} disabled={isCreatingOrder}>
               Cancel
             </Button>
-            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateOrder()} disabled={isCreatingOrder || isResourcesLoading}>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleCreateOrder()} disabled={isCreatingOrder || isResourcesLoading || isBeneficiariesLoading || beneficiaries.length === 0}>
               {isCreatingOrder ? "Creating..." : "Create Order"}
             </Button>
           </DialogFooter>
@@ -493,11 +684,60 @@ export function DistributionDashboard() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeAssignDialog} disabled={isAssigningDriver}>
+            <Button variant="outline" onClick={closeAssignDialog} disabled={isUpdatingOrder}>
               Cancel
             </Button>
-            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleAssignDriver()} disabled={isAssigningDriver || availableDrivers.length === 0}>
-              {isAssigningDriver ? "Assigning..." : "Assign Driver"}
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleAssignDriver()} disabled={isUpdatingOrder || availableDrivers.length === 0}>
+              {isUpdatingOrder ? "Assigning..." : "Assign Driver"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedOrderIdForBeneficiaries)} onOpenChange={(isOpen) => { if (!isOpen) closeBeneficiariesDialog() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Beneficiaries</DialogTitle>
+            <DialogDescription>
+              Update beneficiaries for order {selectedBeneficiariesOrder?._id ?? ""}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Label>Beneficiaries</Label>
+            <div className="max-h-48 overflow-auto rounded-md border border-gray-200 px-3 py-2 space-y-2">
+              {isBeneficiariesLoading && (
+                <p className="text-xs text-gray-500">Loading beneficiaries...</p>
+              )}
+
+              {!isBeneficiariesLoading && beneficiaries.length === 0 && (
+                <p className="text-xs text-gray-500">No active beneficiaries found.</p>
+              )}
+
+              {!isBeneficiariesLoading && beneficiaries.map((beneficiary) => {
+                const checked = updateBeneficiaryIds.includes(beneficiary._id)
+
+                return (
+                  <label key={beneficiary._id} className="flex items-start gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleUpdateBeneficiary(beneficiary._id)}
+                    />
+                    <span className="text-sm text-gray-700">{beneficiary.name} ({beneficiary.location})</span>
+                  </label>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-500">Selected: {updateBeneficiaryIds.length} (minimum 1)</p>
+            {updateBeneficiariesError && <p className="text-sm text-red-600">{updateBeneficiariesError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeBeneficiariesDialog} disabled={isUpdatingOrder}>
+              Cancel
+            </Button>
+            <Button className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white" onClick={() => void handleUpdateBeneficiaries()} disabled={isUpdatingOrder || isBeneficiariesLoading}>
+              {isUpdatingOrder ? "Updating..." : "Update Beneficiaries"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -571,14 +811,20 @@ export function DistributionDashboard() {
             <Input
               placeholder="Search order"
               value={searchText}
-              onChange={(event) => dispatch(setSearchText(event.target.value))}
+              onChange={(event) => {
+                dispatch(setSearchText(event.target.value))
+                setCurrentPage(1)
+              }}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
             />
           </div>
 
           <Select
             value={statusFilter}
-            onValueChange={(value) => dispatch(setStatusFilter(value as "all" | DistributionOrderStatus))}
+            onValueChange={(value) => {
+              dispatch(setStatusFilter(value as "all" | DistributionOrderStatus))
+              setCurrentPage(1)
+            }}
           >
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Status" />
@@ -593,7 +839,13 @@ export function DistributionDashboard() {
             </SelectContent>
           </Select>
 
-          <Select value={driverFilter} onValueChange={(value) => dispatch(setDriverFilter(value))}>
+          <Select
+            value={driverFilter}
+            onValueChange={(value) => {
+              dispatch(setDriverFilter(value))
+              setCurrentPage(1)
+            }}
+          >
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Drivers" />
             </SelectTrigger>
@@ -607,21 +859,40 @@ export function DistributionDashboard() {
             </SelectContent>
           </Select>
 
+          <Select
+            value={beneficiaryFilter}
+            onValueChange={(value) => {
+              setBeneficiaryFilter(value)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-44 h-10 rounded-xl border-gray-200 bg-white">
+              <SelectValue placeholder="All Beneficiaries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Beneficiaries</SelectItem>
+              {beneficiaries.map((beneficiary) => (
+                <SelectItem key={beneficiary._id} value={beneficiary._id}>
+                  {beneficiary.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button
             variant="ghost"
             className="h-10 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-            onClick={() => dispatch(clearFilters())}
+            onClick={() => {
+              dispatch(clearFilters())
+              setBeneficiaryFilter("all")
+              setCurrentPage(1)
+            }}
           >
             Clear Filters
           </Button>
         </div>
 
         <div className="flex items-center gap-3 xl:ml-auto w-full xl:w-auto justify-end">
-          <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
-            <Calendar className="mr-2 h-4 w-4 text-gray-500" />
-            Live View
-            <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
-          </Button>
           <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium" disabled>
             <Download className="mr-2 h-4 w-4" />
             Download
@@ -631,7 +902,7 @@ export function DistributionDashboard() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium">
-          Showing {filteredOrders.length} of {orders.length} orders
+          Showing {orders.length} of {totalOrders} orders
         </span>
       </div>
 
@@ -669,12 +940,21 @@ export function DistributionDashboard() {
               </TableRow>
             )}
 
-            {!isOrdersLoading && !isOrdersError && filteredOrders.map((order) => {
+            {!isOrdersLoading && !isOrdersError && orders.map((order) => {
               const isExpanded = expandedOrderIds.includes(order._id)
               const createdAt = new Date(order.createdAt).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
               })
+              const beneficiaryLabelsFromOrder = getOrderBeneficiaryLabels(order, beneficiaryLabelById)
+              const beneficiaryLabels =
+                beneficiaryLabelsFromOrder.length > 0
+                  ? beneficiaryLabelsFromOrder
+                  : (beneficiaryLabelsOverrideByOrder[order._id] ?? [])
+              const beneficiarySummary =
+                beneficiaryLabels.length > 0
+                  ? beneficiaryLabels.slice(0, 2).join(", ")
+                  : "No beneficiaries linked"
 
               return (
                 <Fragment key={order._id}>
@@ -703,7 +983,10 @@ export function DistributionDashboard() {
                             {order._id}
                           </span>
                           <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
-                            {getResourceLabel(order)} | {createdAt}
+                            {getResourceLabel(order, resourceNameById)} | {createdAt}
+                          </span>
+                          <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
+                            {beneficiarySummary}
                           </span>
                         </div>
                       </button>
@@ -726,6 +1009,15 @@ export function DistributionDashboard() {
                           onClick={() => openAssignDialog(order)}
                         >
                           <UserPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+                          title="Update Beneficiaries"
+                          onClick={() => openBeneficiariesDialog(order)}
+                        >
+                          <Users className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -772,6 +1064,21 @@ export function DistributionDashboard() {
                             <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Notes</p>
                             <p className="text-sm text-gray-700">{order.notes ?? "No notes provided."}</p>
                           </div>
+
+                          <div className="mb-2">
+                            <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Beneficiaries</p>
+                            {beneficiaryLabels.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {beneficiaryLabels.map((label) => (
+                                  <span key={`${order._id}-${label}`} className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium px-2.5 py-1">
+                                    {label}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600">No beneficiaries linked.</p>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -780,7 +1087,7 @@ export function DistributionDashboard() {
               )
             })}
 
-            {!isOrdersLoading && !isOrdersError && filteredOrders.length === 0 && (
+            {!isOrdersLoading && !isOrdersError && orders.length === 0 && (
               <TableRow className="border-b border-gray-50">
                 <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
                   <p className="text-sm font-medium text-gray-700 mb-1">No orders match your current filters.</p>
@@ -790,6 +1097,52 @@ export function DistributionDashboard() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center gap-3">
+          <p>
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Records</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value))
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-[92px] rounded-lg border-gray-200 bg-white">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-9 rounded-lg"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            className="h-9 rounded-lg"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   )

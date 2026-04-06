@@ -1,5 +1,7 @@
+import { useState } from "react"
 import { Search, SlidersHorizontal, Plus, Download, Pencil, Trash2, MapPin, Droplet } from "lucide-react"
 import { Link } from "react-router-dom"
+import { useGetWaterSourcesQuery, useDeleteWaterSourceMutation } from "@/features/water-sources/waterSourceApi"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -12,14 +14,29 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-const MOCK_SOURCES = [
-  { id: "WS-001", name: "Primary Aquifer 1", type: "Well", capacity: "50,000 L", level: "85%", status: "Active", location: "North Sector" },
-  { id: "WS-002", name: "Community Tank A", type: "Storage", capacity: "10,000 L", level: "40%", status: "Active", location: "Sector 2" },
-  { id: "WS-003", name: "River Intake Pump", type: "Surface", capacity: "100,000 L/d", level: "N/A", status: "Maintenance", location: "East River" },
-  { id: "WS-004", name: "Emergency Reservoir", type: "Storage", capacity: "25,000 L", level: "100%", status: "Standby", location: "Central Hub" },
-]
-
 export function WaterSourceDashboard() {
+  const { data: sources, isLoading, error } = useGetWaterSourcesQuery()
+  const [deleteWaterSource] = useDeleteWaterSourceMutation()
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this water source?")) {
+      try {
+        await deleteWaterSource(id).unwrap()
+      } catch (err) {
+        console.error("Failed to delete water source", err)
+      }
+    }
+  }
+
+  const filteredSources = sources?.filter(source => 
+    source.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    source._id.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  if (isLoading) return <div>Loading water sources...</div>
+  if (error) return <div>Error loading water sources</div>
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       {/* Header */}
@@ -39,18 +56,18 @@ export function WaterSourceDashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search source by name or ID"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-emerald-500"
             />
           </div>
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-          <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium asChild">
+          <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium flex items-center" asChild>
             <Link to="/water-sources/new">
-              <span className="flex items-center">
-                 <Plus className="mr-2 h-4 w-4" />
-                 Add New Source
-              </span>
+               <Plus className="mr-2 h-4 w-4" />
+               Add New Source
             </Link>
           </Button>
           <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
@@ -67,14 +84,14 @@ export function WaterSourceDashboard() {
             <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
               <TableHead className="text-gray-500 font-semibold text-xs py-4 pl-4">Source Details</TableHead>
               <TableHead className="text-gray-500 font-semibold text-xs py-4">Capacity</TableHead>
-              <TableHead className="text-gray-500 font-semibold text-xs py-4 text-center">Current Level</TableHead>
+              <TableHead className="text-gray-500 font-semibold text-xs py-4">Condition</TableHead>
               <TableHead className="text-gray-500 font-semibold text-xs py-4">Status</TableHead>
               <TableHead className="text-gray-500 font-semibold text-xs text-right pr-6 py-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {MOCK_SOURCES.map((source) => (
-              <TableRow key={source.id} className="hover:bg-gray-50/50 border-b border-gray-50 transition-colors">
+            {filteredSources?.map((source) => (
+              <TableRow key={source._id} className="hover:bg-gray-50/50 border-b border-gray-50 transition-colors">
                 <TableCell className="pl-4 py-4">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 shrink-0 rounded-full bg-blue-50 flex items-center justify-center">
@@ -82,7 +99,7 @@ export function WaterSourceDashboard() {
                     </div>
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-900 text-sm">
-                        {source.name} <span className="text-xs font-normal text-gray-400 ml-1">({source.id})</span>
+                        {source.name} <span className="text-xs font-normal text-gray-400 ml-1">({source._id.slice(-6)})</span>
                       </span>
                       <span className="text-xs text-gray-500 mt-0.5 flex items-center">
                         <MapPin className="h-3 w-3 mr-1" /> {source.location} • {source.type}
@@ -91,33 +108,29 @@ export function WaterSourceDashboard() {
                   </div>
                 </TableCell>
                 <TableCell className="text-sm font-medium text-gray-600 py-4">
-                   {source.capacity}
+                   {source.capacity} L
                 </TableCell>
                 <TableCell className="py-4">
-                   <div className="flex items-center justify-center gap-2">
-                     <span className="text-sm font-semibold text-gray-700">{source.level}</span>
-                     {source.level !== "N/A" && (
-                        <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                           <div className="h-full bg-blue-500 rounded-full" style={{ width: source.level }} />
-                        </div>
-                     )}
-                   </div>
+                   <div className="text-sm font-semibold text-gray-700">{source.condition}</div>
                 </TableCell>
                 <TableCell className="py-4">
-                   {source.status === "Active" ? (
+                   {source.isActive ? (
                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-600">Active</span>
-                   ) : source.status === "Maintenance" ? (
-                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-600">Maintenance</span>
                    ) : (
-                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-600">Standby</span>
+                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-600">Inactive</span>
                    )}
                 </TableCell>
                 <TableCell className="text-right pr-6 py-4">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 asChild">
-                      <Link to={`/water-sources/edit/${source.id}`}><Pencil className="h-4 w-4" /></Link>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600" asChild>
+                      <Link to={`/water-sources/edit/${source._id}`}><Pencil className="h-4 w-4" /></Link>
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-gray-400 hover:text-red-600"
+                      onClick={() => handleDelete(source._id)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

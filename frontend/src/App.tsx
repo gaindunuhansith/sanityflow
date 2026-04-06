@@ -12,7 +12,10 @@ import { CreateWaterSourceForm, UpdateWaterSourceForm } from "./components/water
 import { WaterTestDashboard } from "./components/water-tests/WaterTestDashboard";
 import { CreateWaterTestForm, UpdateWaterTestForm } from "./components/water-tests/WaterTestForms";
 import { DistributionDashboard } from "./components/distribution/DistributionDashboard";
+import { BlogDashboard } from "./components/blog/BlogDashboard";
 import { DriverDashboard } from "./components/drivers/DriverDashboard";
+import { BeneficiaryDashboard } from "./components/beneficiaries/BeneficiaryDashboard";
+import { WeatherDashboard } from "./components/weather/WeatherDashboard";
 
 const router = createBrowserRouter([
   {
@@ -46,9 +49,17 @@ const router = createBrowserRouter([
                     <h2 className="text-emerald-900 font-semibold text-lg mb-2">Water Quality Logs</h2>
                     <p className="text-sm text-gray-500">Track and review water quality tests to maintain compliance.</p>
                   </Link>
+                  <Link to="/blog" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Blog Management</h2>
+                    <p className="text-sm text-gray-500">Manage dashboard blog posts and updates for the system.</p>
+                  </Link>
                 </div>
               </div>
             ),
+          },
+          {
+            path: "blog",
+            element: <BlogDashboard />
           },
           {
             path: "distributions",
@@ -76,7 +87,7 @@ const router = createBrowserRouter([
           },
           {
             path: "beneficiaries",
-            element: <div>Beneficiaries Placeholder</div>
+            element: <BeneficiaryDashboard />
           },
           {
             path: "water-sources",
@@ -101,6 +112,10 @@ const router = createBrowserRouter([
           {
             path: "water-tests/edit/:id",
             element: <UpdateWaterTestForm />
+          },
+          {
+            path: "weather",
+            element: <WeatherDashboard />
           },
           {
             path: "settings",

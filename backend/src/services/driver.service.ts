@@ -28,10 +28,47 @@ export const createDriver = async (data: Partial<IDriver> & { password: string }
   }
 };
 
-export const getAllDrivers = async (filters?: { availability?: 'Active' | 'Inactive' }) => {
+export const getAllDrivers = async (filters?: {
+  availability?: 'Active' | 'Inactive';
+  search?: string;
+  page?: number;
+  limit?: number;
+}) => {
   const query: any = {};
-  if (filters?.availability) query.availability = filters.availability;
-  return await Driver.find(query).sort({ createdAt: -1 });
+
+  if (filters?.availability) {
+    query.availability = filters.availability;
+  }
+
+  if (filters?.search) {
+    const pattern = new RegExp(filters.search, 'i');
+    query.$or = [
+      { name: pattern },
+      { email: pattern },
+      { contact: pattern },
+      { vehicleInfo: pattern },
+      { assignedArea: pattern },
+    ];
+  }
+
+  const page = Number.isFinite(filters?.page) ? Math.max(1, filters?.page as number) : 1;
+  const limit = Number.isFinite(filters?.limit)
+    ? Math.min(100, Math.max(1, filters?.limit as number))
+    : 10;
+  const skip = (page - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    Driver.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Driver.countDocuments(query),
+  ]);
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  };
 };
 
 export const getDriverById = async (id: string) => {

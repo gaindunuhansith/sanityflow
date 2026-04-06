@@ -15,9 +15,14 @@ export const createBeneficiaryController = async (req: Request, res: Response, n
 
 export const getAllBeneficiariesController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { eligibilityStatus } = req.query;
+    const { eligibilityStatus, search, page, limit } = req.query;
     const beneficiaries = await getAllBeneficiaries(
-      eligibilityStatus ? { eligibilityStatus: eligibilityStatus as 'Active' | 'Inactive' } : undefined
+      {
+        ...(eligibilityStatus ? { eligibilityStatus: eligibilityStatus as 'Active' | 'Inactive' } : {}),
+        ...(search ? { search: String(search) } : {}),
+        ...(page ? { page: Number(page) } : {}),
+        ...(limit ? { limit: Number(limit) } : {}),
+      }
     );
     res.status(200).json(beneficiaries);
   } catch (error) {

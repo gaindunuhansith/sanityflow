@@ -10,6 +10,7 @@ import { blogApi } from '@/features/blog/blogApi'
 import { blogReducer } from '@/features/blog/blogSlice'
 import { driverReducer } from '@/features/driver/driverSlice'
 import { driverApi } from '@/features/driver/driverApi'
+import { waterTestApi } from '@/features/water-tests/waterTestApi'
 
 import { waterSourceApi } from '@/features/water-sources/waterSourceApi'
 import { beneficiaryReducer } from '@/features/beneficiary/beneficiarySlice'
@@ -25,6 +26,7 @@ export const store = configureStore({
     beneficiary: beneficiaryReducer,
     blog: blogReducer,
     [authApi.reducerPath]: authApi.reducer,
+    [waterTestApi.reducerPath]: waterTestApi.reducer,
     [forumApi.reducerPath]: forumApi.reducer,
     [issueApi.reducerPath]: issueApi.reducer,
     [distributionApi.reducerPath]: distributionApi.reducer,
@@ -37,6 +39,7 @@ export const store = configureStore({
     getDefaultMiddleware().concat(
       forumApi.middleware,
       authApi.middleware,
+      waterTestApi.middleware,
       distributionApi.middleware,
       driverApi.middleware,
       blogApi.middleware,

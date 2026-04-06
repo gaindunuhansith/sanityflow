@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import WaterQualityTest from '../models/WaterQualityTest.js';
 import type { IWaterQualityTest } from '../models/WaterQualityTest.js';
+import WaterSource from '../models/WaterSource.js';
 import type { CreateWaterTestData, UpdateWaterTestData, WaterTestFilters } from '../validations/waterTest.schemas.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/errorHandler.js';
@@ -16,6 +17,11 @@ export const createWaterTestService = async (
   data: CreateWaterTestData,
   userId: string
 ): Promise<IWaterQualityTest> => {
+  const sourceExists = await WaterSource.exists({ _id: data.waterSource });
+  if (!sourceExists) {
+    throw new AppError(404, 'Water source not found');
+  }
+
   const status = classifyWaterSafety(data.pH, data.tds, data.turbidity, data.contaminants);
 
   const test = new WaterQualityTest({
@@ -69,11 +75,23 @@ export const updateWaterTestService = async (
   id: string,
   data: UpdateWaterTestData
 ): Promise<IWaterQualityTest> => {
-  const test = await WaterQualityTest.findByIdAndUpdate(
-    id,
-    data,
-    { new: true, runValidators: true }
-  );
+  const existingTest = await WaterQualityTest.findById(id);
+  if (!existingTest) {
+    throw new AppError(404, 'Water quality test not found');
+  }
+
+  const nextPH = data.pH ?? existingTest.pH;
+  const nextTDS = data.tds ?? existingTest.tds;
+  const nextTurbidity = data.turbidity ?? existingTest.turbidity;
+  const nextContaminants = data.contaminants ?? existingTest.contaminants;
+  const recalculatedStatus = classifyWaterSafety(nextPH, nextTDS, nextTurbidity, nextContaminants);
+
+  const payload = {
+    ...data,
+    status: recalculatedStatus,
+  };
+
+  const test = await WaterQualityTest.findByIdAndUpdate(id, payload, { new: true, runValidators: true });
 
   if (!test) {
     throw new AppError(404, 'Water quality test not found');

@@ -10,8 +10,11 @@ import { blogApi } from '@/features/blog/blogApi'
 import { blogReducer } from '@/features/blog/blogSlice'
 import { driverReducer } from '@/features/driver/driverSlice'
 import { driverApi } from '@/features/driver/driverApi'
+
+import { waterSourceApi } from '@/features/water-sources/waterSourceApi'
 import { beneficiaryReducer } from '@/features/beneficiary/beneficiarySlice'
 import { beneficiaryApi } from '@/features/beneficiary/beneficiaryApi'
+
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +31,7 @@ export const store = configureStore({
     [driverApi.reducerPath]: driverApi.reducer,
     [beneficiaryApi.reducerPath]: beneficiaryApi.reducer,
     [blogApi.reducerPath]: blogApi.reducer,
+    [waterSourceApi.reducerPath]: waterSourceApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -35,9 +39,14 @@ export const store = configureStore({
       authApi.middleware,
       distributionApi.middleware,
       driverApi.middleware,
+
+      blogApi.middleware,
+      waterSourceApi.middleware
+
       beneficiaryApi.middleware,
       issueApi.middleware,
       blogApi.middleware
+
     ),
 })
 

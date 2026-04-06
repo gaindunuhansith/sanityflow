@@ -15,9 +15,14 @@ export const createDriverController = async (req: Request, res: Response, next: 
 
 export const getAllDriversController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { availability } = req.query;
+    const { availability, search, page, limit } = req.query;
     const drivers = await getAllDrivers(
-      availability ? { availability: availability as 'Active' | 'Inactive' } : undefined
+      {
+        ...(availability ? { availability: availability as 'Active' | 'Inactive' } : {}),
+        ...(search ? { search: String(search) } : {}),
+        ...(page ? { page: Number(page) } : {}),
+        ...(limit ? { limit: Number(limit) } : {}),
+      }
     );
     res.status(200).json(drivers);
   } catch (error) {

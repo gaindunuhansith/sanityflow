@@ -10,7 +10,11 @@ import { blogApi } from '@/features/blog/blogApi'
 import { blogReducer } from '@/features/blog/blogSlice'
 import { driverReducer } from '@/features/driver/driverSlice'
 import { driverApi } from '@/features/driver/driverApi'
+
 import { waterSourceApi } from '@/features/water-sources/waterSourceApi'
+import { beneficiaryReducer } from '@/features/beneficiary/beneficiarySlice'
+import { beneficiaryApi } from '@/features/beneficiary/beneficiaryApi'
+
 
 export const store = configureStore({
   reducer: {
@@ -18,12 +22,14 @@ export const store = configureStore({
     auth: authReducer,
     distribution: distributionReducer,
     driver: driverReducer,
+    beneficiary: beneficiaryReducer,
     blog: blogReducer,
     [authApi.reducerPath]: authApi.reducer,
     [forumApi.reducerPath]: forumApi.reducer,
     [issueApi.reducerPath]: issueApi.reducer,
     [distributionApi.reducerPath]: distributionApi.reducer,
     [driverApi.reducerPath]: driverApi.reducer,
+    [beneficiaryApi.reducerPath]: beneficiaryApi.reducer,
     [blogApi.reducerPath]: blogApi.reducer,
     [waterSourceApi.reducerPath]: waterSourceApi.reducer,
   },
@@ -31,13 +37,17 @@ export const store = configureStore({
     getDefaultMiddleware().concat(
       forumApi.middleware,
       authApi.middleware,
-      issueApi.middleware,
       distributionApi.middleware,
       driverApi.middleware,
+
       blogApi.middleware,
       waterSourceApi.middleware
-    ),
 
+      beneficiaryApi.middleware,
+      issueApi.middleware,
+      blogApi.middleware
+
+    ),
 })
 
 export type RootState = ReturnType<typeof store.getState>

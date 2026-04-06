@@ -69,6 +69,19 @@ describe('weather.controller', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('should return 400 for blank location string', async () => {
+    const req = { params: { location: '   ' } } as any;
+    const res = createMockRes();
+    const next = jest.fn();
+
+    await getWeatherController(req, res as any, next);
+
+    expect(mockedFetchWeather).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Location parameter is required and must be a string' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('should return 404 when weather data not found', async () => {
     const req = { params: { location: 'InvalidLocation' } } as any;
     const res = createMockRes();

@@ -9,7 +9,12 @@ export const getWeatherController = async (req: Request, res: Response, next: Ne
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Location parameter is required and must be a string' });
     }
 
-    const weather = await fetchWeatherForLocation(location);
+    const normalizedLocation = decodeURIComponent(location).trim();
+    if (!normalizedLocation) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Location parameter is required and must be a string' });
+    }
+
+    const weather = await fetchWeatherForLocation(normalizedLocation);
     if (!weather) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Weather data not found for the specified location' });
     }

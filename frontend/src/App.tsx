@@ -15,6 +15,7 @@ import { DistributionDashboard } from "./components/distribution/DistributionDas
 import { BlogDashboard } from "./components/blog/BlogDashboard";
 import { DriverDashboard } from "./components/drivers/DriverDashboard";
 import { BeneficiaryDashboard } from "./components/beneficiaries/BeneficiaryDashboard";
+import { WeatherDashboard } from "./components/weather/WeatherDashboard";
 
 const router = createBrowserRouter([
   {
@@ -111,6 +112,10 @@ const router = createBrowserRouter([
           {
             path: "water-tests/edit/:id",
             element: <UpdateWaterTestForm />
+          },
+          {
+            path: "weather",
+            element: <WeatherDashboard />
           },
           {
             path: "settings",

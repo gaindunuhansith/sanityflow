@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -23,6 +24,31 @@ import {
 import { useGetResourcesQuery } from "@/features/inventory/resourceApi"
 import type { InventoryTransactionType } from "@/features/inventory/inventoryTransactionApi"
 
+const LARGE_FETCH_LIMIT = 1000
+
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return "Request failed. Please try again."
+  }
+
+  const maybeError = error as { data?: unknown }
+  const data = maybeError.data
+
+  if (data && typeof data === "object") {
+    const maybeMessage = data as { message?: unknown; error?: unknown }
+
+    if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
+      return maybeMessage.message
+    }
+
+    if (typeof maybeMessage.error === "string" && maybeMessage.error.trim().length > 0) {
+      return maybeMessage.error
+    }
+  }
+
+  return "Request failed. Please try again."
+}
+
 interface InventoryTransactionFormProps {
   isOpen: boolean
   onClose: () => void
@@ -31,67 +57,99 @@ interface InventoryTransactionFormProps {
 const transactionTypes: InventoryTransactionType[] = ["ADD", "REMOVE", "TRANSFER"]
 
 export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransactionFormProps) {
+  const today = new Date().toISOString().split("T")[0]
+
   const [formData, setFormData] = useState({
     product: "",
     type: "ADD" as InventoryTransactionType,
-    quantity: 1,
+    quantity: "1",
     reason: "",
-    date: new Date().toISOString().split("T")[0],
+    date: today,
   })
+  const [formError, setFormError] = useState("")
 
-  const { data: resourcesResponse } = useGetResourcesQuery()
+  const { data: resourcesResponse } = useGetResourcesQuery({
+    page: 1,
+    limit: LARGE_FETCH_LIMIT,
+  })
   const resources = resourcesResponse?.items || []
+  const activeResources = resources.filter((resource) => resource.isActive)
 
   const [createTransaction, { isLoading }] = useCreateTransactionMutation()
 
   const handleSubmit = async () => {
-    try {
-      if (!formData.product || !formData.reason || formData.quantity <= 0) {
-        alert("Please fill all required fields")
-        return
-      }
+    const quantity = Number(formData.quantity)
+    const reason = formData.reason.trim()
 
+    if (!formData.product) {
+      setFormError("Please select a resource.")
+      return
+    }
+
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      setFormError("Quantity must be 1 or greater.")
+      return
+    }
+
+    if (!reason) {
+      setFormError("Reason is required.")
+      return
+    }
+
+    if (formData.date > today) {
+      setFormError("Date cannot be in the future.")
+      return
+    }
+
+    setFormError("")
+
+    try {
       await createTransaction({
-        ...formData,
-        quantity: parseInt(formData.quantity.toString()),
+        product: formData.product,
+        type: formData.type,
+        quantity,
+        reason,
+        date: formData.date,
       }).unwrap()
 
       setFormData({
         product: "",
         type: "ADD",
-        quantity: 1,
+        quantity: "1",
         reason: "",
-        date: new Date().toISOString().split("T")[0],
+        date: today,
       })
+      setFormError("")
       onClose()
     } catch (error) {
-      console.error("Error creating transaction:", error)
+      setFormError(getApiErrorMessage(error))
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create Inventory Transaction</DialogTitle>
           <DialogDescription>Record a new inventory transaction for your resources.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-2">
+          <div className="space-y-2 md:col-span-3">
             <Label htmlFor="product">Product *</Label>
             <Select value={formData.product} onValueChange={(value) => setFormData({ ...formData, product: value })}>
               <SelectTrigger id="product">
                 <SelectValue placeholder="Select a product" />
               </SelectTrigger>
               <SelectContent>
-                {resources.map((resource) => (
+                {activeResources.map((resource) => (
                   <SelectItem key={resource._id} value={resource._id}>
                     {resource.name} ({resource.unit})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {activeResources.length === 0 ? <p className="text-xs text-gray-500">No active resources available for transactions.</p> : null}
           </div>
 
           <div className="space-y-2">
@@ -118,39 +176,42 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity *</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                placeholder="1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Quantity *</Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="1"
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+              placeholder="1"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reason">Reason *</Label>
+            <Label htmlFor="date">Date *</Label>
             <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              max={today}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-3">
+            <Label htmlFor="reason">Reason *</Label>
+            <Textarea
               id="reason"
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               placeholder="e.g., Stock replenishment, Damage, Transfer to branch"
+              rows={3}
             />
           </div>
         </div>
+
+        {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

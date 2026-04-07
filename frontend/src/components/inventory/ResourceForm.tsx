@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { ScanLine } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -20,10 +21,36 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   useGetResourceByIdQuery,
+  useLazyLookupBarcodeQuery,
   useCreateResourceMutation,
   useUpdateResourceMutation,
 } from "@/features/inventory/resourceApi"
 import { useGetSuppliersQuery } from "@/features/inventory/supplierApi"
+
+const LARGE_FETCH_LIMIT = 1000
+
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return "Request failed. Please try again."
+  }
+
+  const maybeError = error as { data?: unknown }
+  const data = maybeError.data
+
+  if (data && typeof data === "object") {
+    const maybeMessage = data as { message?: unknown; error?: unknown }
+
+    if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
+      return maybeMessage.message
+    }
+
+    if (typeof maybeMessage.error === "string" && maybeMessage.error.trim().length > 0) {
+      return maybeMessage.error
+    }
+  }
+
+  return "Request failed. Please try again."
+}
 
 interface ResourceFormProps {
   isOpen: boolean
@@ -42,29 +69,72 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
     barcode: "",
     isActive: true,
   })
+  const [formError, setFormError] = useState("")
+  const [barcodeInfo, setBarcodeInfo] = useState("")
 
   const { data: resource } = useGetResourceByIdQuery(resourceId || "", {
     skip: !resourceId,
   })
 
-  const { data: suppliersResponse } = useGetSuppliersQuery()
+  const [lookupBarcode, { isFetching: isLookingUpBarcode }] = useLazyLookupBarcodeQuery()
+
+  const { data: suppliersResponse } = useGetSuppliersQuery({
+    page: 1,
+    limit: LARGE_FETCH_LIMIT,
+  })
   const suppliers = suppliersResponse?.items || []
+
+  const supplierOptions = useMemo(() => {
+    const selectedSupplierId = formData.supplier.trim()
+
+    if (!selectedSupplierId) {
+      return suppliers
+    }
+
+    if (suppliers.some((supplier) => supplier._id === selectedSupplierId)) {
+      return suppliers
+    }
+
+    const resourceSupplier = resource?.supplier as unknown
+    const fallbackName =
+      resourceSupplier &&
+      typeof resourceSupplier === "object" &&
+      "name" in resourceSupplier &&
+      typeof (resourceSupplier as { name?: unknown }).name === "string"
+        ? ((resourceSupplier as { name: string }).name || "Current supplier")
+        : "Current supplier"
+
+    return [{ _id: selectedSupplierId, name: fallbackName }, ...suppliers]
+  }, [formData.supplier, resource?.supplier, suppliers])
 
   const [createResource, { isLoading: isCreating }] = useCreateResourceMutation()
   const [updateResource, { isLoading: isUpdating }] = useUpdateResourceMutation()
 
   useEffect(() => {
     if (resource) {
+      const resourceSupplier = resource.supplier as unknown
+      const supplierId =
+        typeof resourceSupplier === "string"
+          ? resourceSupplier
+          : resourceSupplier &&
+              typeof resourceSupplier === "object" &&
+              "_id" in resourceSupplier &&
+              typeof (resourceSupplier as { _id?: unknown })._id === "string"
+            ? ((resourceSupplier as { _id: string })._id || "")
+            : ""
+
       setFormData({
         name: resource.name,
         category: resource.category,
         quantity: resource.quantity,
         unit: resource.unit,
         reorderLevel: resource.reorderLevel,
-        supplier: resource.supplier,
+        supplier: supplierId,
         barcode: resource.barcode || "",
         isActive: resource.isActive,
       })
+      setFormError("")
+      setBarcodeInfo("")
     } else if (isOpen && !resourceId) {
       setFormData({
         name: "",
@@ -76,28 +146,98 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
         barcode: "",
         isActive: true,
       })
+      setFormError("")
+      setBarcodeInfo("")
     }
   }, [resource, isOpen, resourceId])
 
+  const handleBarcodeLookup = async () => {
+    const barcode = formData.barcode.trim()
+
+    if (!barcode) {
+      setBarcodeInfo("Enter a barcode to lookup.")
+      return
+    }
+
+    try {
+      const result = await lookupBarcode(barcode).unwrap()
+
+      if (!resourceId) {
+        setFormData((previous) => ({
+          ...previous,
+          name: result.name || previous.name,
+          category: result.category?.split(",")[0]?.trim() || previous.category,
+        }))
+      }
+
+      const source = result.source ?? "External API"
+      const brand = result.brand ? ` | Brand: ${result.brand}` : ""
+      setBarcodeInfo(`Auto-filled from ${source}${brand}`)
+    } catch {
+      setBarcodeInfo("No product found for this barcode.")
+    }
+  }
+
   const handleSubmit = async () => {
+    const name = formData.name.trim()
+    const category = formData.category.trim()
+    const unit = formData.unit.trim()
+    const supplier = formData.supplier.trim()
+    const barcode = formData.barcode.trim()
+    const quantity = Number(formData.quantity)
+    const reorderLevel = Number(formData.reorderLevel)
+
+    if (!name || !category || !unit || !supplier) {
+      setFormError("Name, category, unit and supplier are required.")
+      return
+    }
+
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      setFormError("Quantity must be 0 or greater.")
+      return
+    }
+
+    if (!Number.isFinite(reorderLevel) || reorderLevel < 0) {
+      setFormError("Reorder level must be 0 or greater.")
+      return
+    }
+
+    setFormError("")
+
     try {
       if (resourceId) {
         await updateResource({
           id: resourceId,
-          ...formData,
+          name,
+          category,
+          quantity,
+          unit,
+          reorderLevel,
+          supplier,
+          barcode,
+          isActive: formData.isActive,
         }).unwrap()
       } else {
-        await createResource(formData).unwrap()
+        await createResource({
+          name,
+          category,
+          quantity,
+          unit,
+          reorderLevel,
+          supplier,
+          barcode,
+          isActive: formData.isActive,
+        }).unwrap()
       }
       onClose()
     } catch (error) {
-      console.error("Error saving resource:", error)
+      setFormError(getApiErrorMessage(error))
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{resourceId ? "Edit Resource" : "Create New Resource"}</DialogTitle>
           <DialogDescription>
@@ -106,6 +246,28 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="barcode">Barcode (Optional)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="barcode"
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                placeholder="e.g., 123456789"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBarcodeLookup}
+                disabled={isLookingUpBarcode}
+              >
+                <ScanLine className="mr-2 h-4 w-4" />
+                {isLookingUpBarcode ? "Looking up..." : "Lookup"}
+              </Button>
+            </div>
+            {barcodeInfo ? <p className="text-xs text-gray-600">{barcodeInfo}</p> : null}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Name *</Label>
             <Input
@@ -131,6 +293,7 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
               <Input
                 id="quantity"
                 type="number"
+                min="0"
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
                 placeholder="0"
@@ -153,6 +316,7 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
               <Input
                 id="reorderLevel"
                 type="number"
+                min="0"
                 value={formData.reorderLevel}
                 onChange={(e) => setFormData({ ...formData, reorderLevel: parseInt(e.target.value) || 10 })}
                 placeholder="10"
@@ -167,23 +331,13 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
                 <SelectValue placeholder="Select a supplier" />
               </SelectTrigger>
               <SelectContent>
-                {suppliers.map((supplier) => (
+                {supplierOptions.map((supplier) => (
                   <SelectItem key={supplier._id} value={supplier._id}>
                     {supplier.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="barcode">Barcode (Optional)</Label>
-            <Input
-              id="barcode"
-              value={formData.barcode}
-              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              placeholder="e.g., 123456789"
-            />
           </div>
 
           <div className="flex items-center space-x-2">
@@ -196,6 +350,8 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
               Active
             </Label>
           </div>
+
+          {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
         </div>
 
         <DialogFooter>

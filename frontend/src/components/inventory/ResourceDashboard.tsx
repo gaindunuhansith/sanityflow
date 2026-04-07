@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Trash2 } from "lucide-react"
 import {
   useGetResourcesQuery,
@@ -6,6 +6,13 @@ import {
 } from "@/features/inventory/resourceApi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -31,6 +38,10 @@ export function ResourceDashboard() {
   const dispatch = useAppDispatch()
   const { searchQuery, page, limit, isCreateModalOpen, editingResourceId } =
     useAppSelector(selectResourceState)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
+  const [stockFilter, setStockFilter] = useState<"all" | "in-stock" | "low" | "out">("all")
 
   const { data: response, isLoading, refetch } = useGetResourcesQuery({
     page: 1,
@@ -39,10 +50,40 @@ export function ResourceDashboard() {
 
   const resources = response?.items ?? []
 
+  const categories = useMemo(() => {
+    return [...new Set(resources.map((resource) => resource.category).filter((category) => category.trim().length > 0))].sort((a, b) =>
+      a.localeCompare(b),
+    )
+  }, [resources])
+
   const filteredResources = useMemo(() => {
     const search = searchQuery.trim().toLowerCase()
 
     return resources.filter((resource) => {
+      if (categoryFilter !== "all" && resource.category !== categoryFilter) {
+        return false
+      }
+
+      if (statusFilter === "active" && !resource.isActive) {
+        return false
+      }
+
+      if (statusFilter === "inactive" && resource.isActive) {
+        return false
+      }
+
+      if (stockFilter === "low" && (resource.quantity > resource.reorderLevel || resource.quantity === 0)) {
+        return false
+      }
+
+      if (stockFilter === "out" && resource.quantity !== 0) {
+        return false
+      }
+
+      if (stockFilter === "in-stock" && resource.quantity <= resource.reorderLevel) {
+        return false
+      }
+
       if (!search) {
         return true
       }
@@ -54,7 +95,7 @@ export function ResourceDashboard() {
         resource.barcode ?? "",
       ].some((field) => field.toLowerCase().includes(search))
     })
-  }, [resources, searchQuery])
+  }, [resources, searchQuery, categoryFilter, statusFilter, stockFilter])
 
   const totalResources = filteredResources.length
   const totalPages = Math.max(1, Math.ceil(totalResources / limit))
@@ -80,6 +121,9 @@ export function ResourceDashboard() {
 
   const clearFilters = () => {
     dispatch(resetResourceFilters())
+    setCategoryFilter("all")
+    setStatusFilter("all")
+    setStockFilter("all")
   }
 
   return (
@@ -119,7 +163,12 @@ export function ResourceDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 bg-white" onClick={() => void refetch()}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl h-10 w-10 border-gray-200 bg-white"
+              onClick={() => setShowAdvancedFilters((current) => !current)}
+            >
               <SlidersHorizontal className="h-4 w-4 text-gray-600" />
             </Button>
             <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium" onClick={() => dispatch(setCreateResourceModalOpen(true))}>
@@ -128,6 +177,52 @@ export function ResourceDashboard() {
             </Button>
           </div>
         </div>
+
+        {showAdvancedFilters ? (
+          <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 flex flex-wrap items-center gap-3">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-44 h-10 rounded-xl border-gray-200 bg-white">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive") }>
+              <SelectTrigger className="w-40 h-10 rounded-xl border-gray-200 bg-white">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={stockFilter} onValueChange={(value) => setStockFilter(value as "all" | "in-stock" | "low" | "out") }>
+              <SelectTrigger className="w-40 h-10 rounded-xl border-gray-200 bg-white">
+                <SelectValue placeholder="Stock" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stock</SelectItem>
+                <SelectItem value="in-stock">In Stock</SelectItem>
+                <SelectItem value="low">Low Stock</SelectItem>
+                <SelectItem value="out">Out of Stock</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white" onClick={() => void refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Data
+            </Button>
+          </div>
+        ) : null}
 
         <div className="rounded-2xl border border-gray-100 overflow-hidden">
           <Table>

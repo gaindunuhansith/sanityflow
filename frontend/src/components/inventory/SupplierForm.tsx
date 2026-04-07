@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   useGetSupplierByIdQuery,
   useCreateSupplierMutation,
@@ -155,7 +156,7 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{supplierId ? "Edit Supplier" : "Create New Supplier"}</DialogTitle>
           <DialogDescription>
@@ -163,8 +164,8 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="name">Supplier Name *</Label>
             <Input
               id="name"
@@ -207,9 +208,9 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="address">Address</Label>
-            <Input
+            <Textarea
               id="address"
               value={formData.contact.address}
               onChange={(e) =>
@@ -219,6 +220,7 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
                 })
               }
               placeholder="123 Main St, City"
+              rows={3}
             />
           </div>
 
@@ -242,9 +244,9 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
               <option value={5}>5 - Excellent</option>
             </select>
           </div>
-
-          {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
         </div>
+
+        {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

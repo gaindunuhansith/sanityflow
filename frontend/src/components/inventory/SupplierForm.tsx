@@ -16,6 +16,29 @@ import {
   useUpdateSupplierMutation,
 } from "@/features/inventory/supplierApi"
 
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return "Request failed. Please try again."
+  }
+
+  const maybeError = error as { data?: unknown }
+  const data = maybeError.data
+
+  if (data && typeof data === "object") {
+    const maybeMessage = data as { message?: unknown; error?: unknown }
+
+    if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
+      return maybeMessage.message
+    }
+
+    if (typeof maybeMessage.error === "string" && maybeMessage.error.trim().length > 0) {
+      return maybeMessage.error
+    }
+  }
+
+  return "Request failed. Please try again."
+}
+
 interface SupplierFormProps {
   isOpen: boolean
   onClose: () => void
@@ -32,6 +55,7 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
     },
     reliabilityRating: 3,
   })
+  const [formError, setFormError] = useState("")
 
   const { data: supplier } = useGetSupplierByIdQuery(supplierId || "", {
     skip: !supplierId,
@@ -51,6 +75,7 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
         },
         reliabilityRating: supplier.reliabilityRating,
       })
+      setFormError("")
     } else if (isOpen && !supplierId) {
       setFormData({
         name: "",
@@ -61,22 +86,60 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
         },
         reliabilityRating: 3,
       })
+      setFormError("")
     }
   }, [supplier, isOpen, supplierId])
 
   const handleSubmit = async () => {
+    const name = formData.name.trim()
+    const rating = Number(formData.reliabilityRating)
+    const email = formData.contact.email.trim()
+    const phone = formData.contact.phone.trim()
+    const address = formData.contact.address.trim()
+
+    if (!name) {
+      setFormError("Supplier name is required.")
+      return
+    }
+
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      setFormError("Reliability rating must be between 1 and 5.")
+      return
+    }
+
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+      setFormError("Please enter a valid email address.")
+      return
+    }
+
+    setFormError("")
+
     try {
       if (supplierId) {
         await updateSupplier({
           id: supplierId,
-          ...formData,
+          name,
+          contact: {
+            email: email || undefined,
+            phone: phone || undefined,
+            address: address || undefined,
+          },
+          reliabilityRating: rating,
         }).unwrap()
       } else {
-        await createSupplier(formData).unwrap()
+        await createSupplier({
+          name,
+          contact: {
+            email: email || undefined,
+            phone: phone || undefined,
+            address: address || undefined,
+          },
+          reliabilityRating: rating,
+        }).unwrap()
       }
       onClose()
     } catch (error) {
-      console.error("Error saving supplier:", error)
+      setFormError(getApiErrorMessage(error))
     }
   }
 
@@ -167,6 +230,8 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
               <option value={5}>5 - Excellent</option>
             </select>
           </div>
+
+          {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
         </div>
 
         <DialogFooter>

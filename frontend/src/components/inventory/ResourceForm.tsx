@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ScanLine } from "lucide-react"
 import {
   Dialog,
@@ -26,6 +26,8 @@ import {
   useUpdateResourceMutation,
 } from "@/features/inventory/resourceApi"
 import { useGetSuppliersQuery } from "@/features/inventory/supplierApi"
+
+const LARGE_FETCH_LIMIT = 1000
 
 const getApiErrorMessage = (error: unknown) => {
   if (!error || typeof error !== "object") {
@@ -76,21 +78,58 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
 
   const [lookupBarcode, { isFetching: isLookingUpBarcode }] = useLazyLookupBarcodeQuery()
 
-  const { data: suppliersResponse } = useGetSuppliersQuery()
+  const { data: suppliersResponse } = useGetSuppliersQuery({
+    page: 1,
+    limit: LARGE_FETCH_LIMIT,
+  })
   const suppliers = suppliersResponse?.items || []
+
+  const supplierOptions = useMemo(() => {
+    const selectedSupplierId = formData.supplier.trim()
+
+    if (!selectedSupplierId) {
+      return suppliers
+    }
+
+    if (suppliers.some((supplier) => supplier._id === selectedSupplierId)) {
+      return suppliers
+    }
+
+    const resourceSupplier = resource?.supplier as unknown
+    const fallbackName =
+      resourceSupplier &&
+      typeof resourceSupplier === "object" &&
+      "name" in resourceSupplier &&
+      typeof (resourceSupplier as { name?: unknown }).name === "string"
+        ? ((resourceSupplier as { name: string }).name || "Current supplier")
+        : "Current supplier"
+
+    return [{ _id: selectedSupplierId, name: fallbackName }, ...suppliers]
+  }, [formData.supplier, resource?.supplier, suppliers])
 
   const [createResource, { isLoading: isCreating }] = useCreateResourceMutation()
   const [updateResource, { isLoading: isUpdating }] = useUpdateResourceMutation()
 
   useEffect(() => {
     if (resource) {
+      const resourceSupplier = resource.supplier as unknown
+      const supplierId =
+        typeof resourceSupplier === "string"
+          ? resourceSupplier
+          : resourceSupplier &&
+              typeof resourceSupplier === "object" &&
+              "_id" in resourceSupplier &&
+              typeof (resourceSupplier as { _id?: unknown })._id === "string"
+            ? ((resourceSupplier as { _id: string })._id || "")
+            : ""
+
       setFormData({
         name: resource.name,
         category: resource.category,
         quantity: resource.quantity,
         unit: resource.unit,
         reorderLevel: resource.reorderLevel,
-        supplier: resource.supplier,
+        supplier: supplierId,
         barcode: resource.barcode || "",
         isActive: resource.isActive,
       })
@@ -292,7 +331,7 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
                 <SelectValue placeholder="Select a supplier" />
               </SelectTrigger>
               <SelectContent>
-                {suppliers.map((supplier) => (
+                {supplierOptions.map((supplier) => (
                   <SelectItem key={supplier._id} value={supplier._id}>
                     {supplier.name}
                   </SelectItem>

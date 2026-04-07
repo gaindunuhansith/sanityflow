@@ -78,6 +78,15 @@ export interface GetResourceByBarcodeParams {
   barcode: string
 }
 
+export interface BarcodeLookupResult {
+  name?: string
+  brand?: string
+  category?: string
+  description?: string
+  image?: string | null
+  source?: string
+}
+
 export const resourceApi = createApi({
   reducerPath: "resourceApi",
   baseQuery: axiosBaseQuery(),
@@ -122,6 +131,12 @@ export const resourceApi = createApi({
         return response as Resource
       },
     }),
+    lookupBarcode: builder.query<BarcodeLookupResult, string>({
+      query: (barcode) => ({
+        url: `/barcode/${barcode}`,
+        method: "GET",
+      }),
+    }),
     createResource: builder.mutation<Resource, CreateResourcePayload>({
       query: (data) => ({
         url: "/resources",
@@ -158,6 +173,7 @@ export const {
   useGetResourcesQuery,
   useGetResourceByIdQuery,
   useGetResourceByBarcodeQuery,
+  useLazyLookupBarcodeQuery,
   useCreateResourceMutation,
   useUpdateResourceMutation,
   useDeleteResourceMutation,

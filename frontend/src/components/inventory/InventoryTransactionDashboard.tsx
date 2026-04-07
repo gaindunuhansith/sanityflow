@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { PackagePlus, RefreshCw, Search, SlidersHorizontal } from "lucide-react"
 import {
   useGetTransactionsQuery,
@@ -97,6 +97,10 @@ export function InventoryTransactionDashboard() {
   const dispatch = useAppDispatch()
   const { searchQuery, typeFilter, page, limit, isCreateModalOpen } =
     useAppSelector(selectTransactionState)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [fromDate, setFromDate] = useState("")
+  const [toDate, setToDate] = useState("")
+  const [actorFilter, setActorFilter] = useState("")
 
   const { data: response, isLoading, refetch } = useGetTransactionsQuery({
     page: 1,
@@ -107,9 +111,26 @@ export function InventoryTransactionDashboard() {
 
   const filteredTransactions = useMemo(() => {
     const search = searchQuery.trim().toLowerCase()
+    const actor = actorFilter.trim().toLowerCase()
 
     return transactions.filter((transaction) => {
       if (typeFilter !== "all" && transaction.type !== typeFilter) {
+        return false
+      }
+
+      const transactionDate = new Date(transaction.date).toISOString().slice(0, 10)
+
+      if (fromDate && transactionDate < fromDate) {
+        return false
+      }
+
+      if (toDate && transactionDate > toDate) {
+        return false
+      }
+
+      const user = getUserLabel(transaction.user)
+
+      if (actor && !user.toLowerCase().includes(actor)) {
         return false
       }
 
@@ -119,13 +140,12 @@ export function InventoryTransactionDashboard() {
 
       const product = getProductLabel(transaction.product)
       const reason = transaction.reason ?? ""
-      const user = getUserLabel(transaction.user)
 
       return [product, reason, user, transaction.type].some((field) =>
         field.toLowerCase().includes(search),
       )
     })
-  }, [transactions, searchQuery, typeFilter])
+  }, [transactions, searchQuery, typeFilter, fromDate, toDate, actorFilter])
 
   const totalTransactions = filteredTransactions.length
   const totalPages = Math.max(1, Math.ceil(totalTransactions / limit))
@@ -192,14 +212,24 @@ export function InventoryTransactionDashboard() {
             <Button
               variant="ghost"
               className="h-10 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-              onClick={() => dispatch(resetTransactionFilters())}
+              onClick={() => {
+                dispatch(resetTransactionFilters())
+                setFromDate("")
+                setToDate("")
+                setActorFilter("")
+              }}
             >
               Clear Filters
             </Button>
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 bg-white" onClick={() => void refetch()}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl h-10 w-10 border-gray-200 bg-white"
+              onClick={() => setShowAdvancedFilters((current) => !current)}
+            >
               <SlidersHorizontal className="h-4 w-4 text-gray-600" />
             </Button>
             <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium" onClick={() => dispatch(setCreateTransactionModalOpen(true))}>
@@ -208,6 +238,35 @@ export function InventoryTransactionDashboard() {
             </Button>
           </div>
         </div>
+
+        {showAdvancedFilters ? (
+          <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 flex flex-wrap items-center gap-3">
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500">From</p>
+              <Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-10 w-44 rounded-xl border-gray-200 bg-white" />
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500">To</p>
+              <Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-10 w-44 rounded-xl border-gray-200 bg-white" />
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500">User</p>
+              <Input
+                placeholder="Filter by user"
+                value={actorFilter}
+                onChange={(event) => setActorFilter(event.target.value)}
+                className="h-10 w-52 rounded-xl border-gray-200 bg-white"
+              />
+            </div>
+
+            <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white self-end" onClick={() => void refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Data
+            </Button>
+          </div>
+        ) : null}
 
         <div className="rounded-2xl border border-gray-100 overflow-hidden">
           <Table>

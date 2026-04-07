@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { ScanLine } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -20,10 +21,34 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   useGetResourceByIdQuery,
+  useGetResourceByBarcodeQuery,
   useCreateResourceMutation,
   useUpdateResourceMutation,
 } from "@/features/inventory/resourceApi"
 import { useGetSuppliersQuery } from "@/features/inventory/supplierApi"
+
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return "Request failed. Please try again."
+  }
+
+  const maybeError = error as { data?: unknown }
+  const data = maybeError.data
+
+  if (data && typeof data === "object") {
+    const maybeMessage = data as { message?: unknown; error?: unknown }
+
+    if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
+      return maybeMessage.message
+    }
+
+    if (typeof maybeMessage.error === "string" && maybeMessage.error.trim().length > 0) {
+      return maybeMessage.error
+    }
+  }
+
+  return "Request failed. Please try again."
+}
 
 interface ResourceFormProps {
   isOpen: boolean
@@ -42,9 +67,20 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
     barcode: "",
     isActive: true,
   })
+  const [formError, setFormError] = useState("")
+  const [barcodeInfo, setBarcodeInfo] = useState("")
+  const [barcodeLookupValue, setBarcodeLookupValue] = useState("")
 
   const { data: resource } = useGetResourceByIdQuery(resourceId || "", {
     skip: !resourceId,
+  })
+
+  const {
+    data: barcodeResource,
+    isFetching: isLookingUpBarcode,
+    isError: isBarcodeLookupError,
+  } = useGetResourceByBarcodeQuery(barcodeLookupValue, {
+    skip: !barcodeLookupValue,
   })
 
   const { data: suppliersResponse } = useGetSuppliersQuery()
@@ -65,6 +101,8 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
         barcode: resource.barcode || "",
         isActive: resource.isActive,
       })
+      setFormError("")
+      setBarcodeInfo("")
     } else if (isOpen && !resourceId) {
       setFormData({
         name: "",
@@ -76,28 +114,105 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
         barcode: "",
         isActive: true,
       })
+      setFormError("")
+      setBarcodeInfo("")
+      setBarcodeLookupValue("")
     }
   }, [resource, isOpen, resourceId])
 
+  useEffect(() => {
+    if (!barcodeLookupValue) {
+      return
+    }
+
+    if (barcodeResource && !resourceId) {
+      setFormData((previous) => ({
+        ...previous,
+        name: barcodeResource.name || previous.name,
+        category: barcodeResource.category || previous.category,
+        unit: barcodeResource.unit || previous.unit,
+      }))
+      setBarcodeInfo("Barcode matched an existing resource. Fields have been auto-filled.")
+      return
+    }
+
+    if (isBarcodeLookupError) {
+      setBarcodeInfo("No resource found for this barcode.")
+    }
+  }, [barcodeLookupValue, barcodeResource, isBarcodeLookupError, resourceId])
+
+  const handleBarcodeLookup = () => {
+    const barcode = formData.barcode.trim()
+
+    if (!barcode) {
+      setBarcodeInfo("Enter a barcode to lookup.")
+      return
+    }
+
+    setBarcodeInfo("")
+    setBarcodeLookupValue(barcode)
+  }
+
   const handleSubmit = async () => {
+    const name = formData.name.trim()
+    const category = formData.category.trim()
+    const unit = formData.unit.trim()
+    const supplier = formData.supplier.trim()
+    const barcode = formData.barcode.trim()
+    const quantity = Number(formData.quantity)
+    const reorderLevel = Number(formData.reorderLevel)
+
+    if (!name || !category || !unit || !supplier) {
+      setFormError("Name, category, unit and supplier are required.")
+      return
+    }
+
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      setFormError("Quantity must be 0 or greater.")
+      return
+    }
+
+    if (!Number.isFinite(reorderLevel) || reorderLevel < 0) {
+      setFormError("Reorder level must be 0 or greater.")
+      return
+    }
+
+    setFormError("")
+
     try {
       if (resourceId) {
         await updateResource({
           id: resourceId,
-          ...formData,
+          name,
+          category,
+          quantity,
+          unit,
+          reorderLevel,
+          supplier,
+          barcode,
+          isActive: formData.isActive,
         }).unwrap()
       } else {
-        await createResource(formData).unwrap()
+        await createResource({
+          name,
+          category,
+          quantity,
+          unit,
+          reorderLevel,
+          supplier,
+          barcode,
+          isActive: formData.isActive,
+        }).unwrap()
       }
       onClose()
     } catch (error) {
-      console.error("Error saving resource:", error)
+      setFormError(getApiErrorMessage(error))
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{resourceId ? "Edit Resource" : "Create New Resource"}</DialogTitle>
           <DialogDescription>
@@ -106,6 +221,28 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="barcode">Barcode (Optional)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="barcode"
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                placeholder="e.g., 123456789"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBarcodeLookup}
+                disabled={isLookingUpBarcode}
+              >
+                <ScanLine className="mr-2 h-4 w-4" />
+                {isLookingUpBarcode ? "Looking up..." : "Lookup"}
+              </Button>
+            </div>
+            {barcodeInfo ? <p className="text-xs text-gray-600">{barcodeInfo}</p> : null}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Name *</Label>
             <Input
@@ -176,16 +313,6 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="barcode">Barcode (Optional)</Label>
-            <Input
-              id="barcode"
-              value={formData.barcode}
-              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              placeholder="e.g., 123456789"
-            />
-          </div>
-
           <div className="flex items-center space-x-2">
             <Checkbox
               id="isActive"
@@ -196,6 +323,8 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
               Active
             </Label>
           </div>
+
+          {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
         </div>
 
         <DialogFooter>

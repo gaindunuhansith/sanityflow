@@ -16,6 +16,12 @@ import { weatherApi } from '@/features/weather/weatherApi'
 import { waterSourceApi } from '@/features/water-sources/waterSourceApi'
 import { beneficiaryReducer } from '@/features/beneficiary/beneficiarySlice'
 import { beneficiaryApi } from '@/features/beneficiary/beneficiaryApi'
+import { resourceReducer } from '@/features/inventory/resourceSlice'
+import { resourceApi } from '@/features/inventory/resourceApi'
+import { supplierReducer } from '@/features/inventory/supplierSlice'
+import { supplierApi } from '@/features/inventory/supplierApi'
+import { inventoryTransactionReducer } from '@/features/inventory/inventoryTransactionSlice'
+import { inventoryTransactionApi } from '@/features/inventory/inventoryTransactionApi'
 
 
 export const store = configureStore({
@@ -26,6 +32,9 @@ export const store = configureStore({
     driver: driverReducer,
     beneficiary: beneficiaryReducer,
     blog: blogReducer,
+    resource: resourceReducer,
+    supplier: supplierReducer,
+    inventoryTransaction: inventoryTransactionReducer,
     [authApi.reducerPath]: authApi.reducer,
     [waterTestApi.reducerPath]: waterTestApi.reducer,
     [weatherApi.reducerPath]: weatherApi.reducer,
@@ -36,6 +45,9 @@ export const store = configureStore({
     [beneficiaryApi.reducerPath]: beneficiaryApi.reducer,
     [blogApi.reducerPath]: blogApi.reducer,
     [waterSourceApi.reducerPath]: waterSourceApi.reducer,
+    [resourceApi.reducerPath]: resourceApi.reducer,
+    [supplierApi.reducerPath]: supplierApi.reducer,
+    [inventoryTransactionApi.reducerPath]: inventoryTransactionApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -49,6 +61,9 @@ export const store = configureStore({
       waterSourceApi.middleware,
       beneficiaryApi.middleware,
       issueApi.middleware,
+      resourceApi.middleware,
+      supplierApi.middleware,
+      inventoryTransactionApi.middleware,
     ),
 })
 

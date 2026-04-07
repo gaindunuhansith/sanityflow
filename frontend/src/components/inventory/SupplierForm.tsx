@@ -112,6 +112,16 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
       return
     }
 
+    if (!/^\d{10}$/.test(phone)) {
+      setFormError("Phone number must be exactly 10 digits.")
+      return
+    }
+
+    if (address.length < 10) {
+      setFormError("Address must be at least 10 characters long.")
+      return
+    }
+
     setFormError("")
 
     try {
@@ -184,14 +194,16 @@ export function SupplierForm({ isOpen, onClose, supplierId }: SupplierFormProps)
             <Label htmlFor="phone">Phone</Label>
             <Input
               id="phone"
+              inputMode="numeric"
+              maxLength={10}
               value={formData.contact.phone}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  contact: { ...formData.contact, phone: e.target.value },
+                  contact: { ...formData.contact, phone: e.target.value.replace(/\D/g, "").slice(0, 10) },
                 })
               }
-              placeholder="+1 (555) 000-0000"
+              placeholder="10-digit phone number"
             />
           </div>
 

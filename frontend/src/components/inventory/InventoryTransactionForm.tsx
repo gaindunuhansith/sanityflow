@@ -56,12 +56,14 @@ interface InventoryTransactionFormProps {
 const transactionTypes: InventoryTransactionType[] = ["ADD", "REMOVE", "TRANSFER"]
 
 export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransactionFormProps) {
+  const today = new Date().toISOString().split("T")[0]
+
   const [formData, setFormData] = useState({
     product: "",
     type: "ADD" as InventoryTransactionType,
-    quantity: 1,
+    quantity: "1",
     reason: "",
-    date: new Date().toISOString().split("T")[0],
+    date: today,
   })
   const [formError, setFormError] = useState("")
 
@@ -92,6 +94,11 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
       return
     }
 
+    if (formData.date > today) {
+      setFormError("Date cannot be in the future.")
+      return
+    }
+
     setFormError("")
 
     try {
@@ -106,9 +113,9 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
       setFormData({
         product: "",
         type: "ADD",
-        quantity: 1,
+        quantity: "1",
         reason: "",
-        date: new Date().toISOString().split("T")[0],
+        date: today,
       })
       setFormError("")
       onClose()
@@ -174,7 +181,7 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
                 type="number"
                 min="1"
                 value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                 placeholder="1"
               />
             </div>
@@ -184,6 +191,7 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
                 id="date"
                 type="date"
                 value={formData.date}
+                max={today}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               />
             </div>

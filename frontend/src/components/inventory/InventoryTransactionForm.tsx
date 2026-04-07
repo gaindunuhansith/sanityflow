@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -72,6 +73,7 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
     limit: LARGE_FETCH_LIMIT,
   })
   const resources = resourcesResponse?.items || []
+  const activeResources = resources.filter((resource) => resource.isActive)
 
   const [createTransaction, { isLoading }] = useCreateTransactionMutation()
 
@@ -126,27 +128,28 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create Inventory Transaction</DialogTitle>
           <DialogDescription>Record a new inventory transaction for your resources.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-2">
+          <div className="space-y-2 md:col-span-3">
             <Label htmlFor="product">Product *</Label>
             <Select value={formData.product} onValueChange={(value) => setFormData({ ...formData, product: value })}>
               <SelectTrigger id="product">
                 <SelectValue placeholder="Select a product" />
               </SelectTrigger>
               <SelectContent>
-                {resources.map((resource) => (
+                {activeResources.map((resource) => (
                   <SelectItem key={resource._id} value={resource._id}>
                     {resource.name} ({resource.unit})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {activeResources.length === 0 ? <p className="text-xs text-gray-500">No active resources available for transactions.</p> : null}
           </div>
 
           <div className="space-y-2">
@@ -173,42 +176,42 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity *</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                placeholder="1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                max={today}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Quantity *</Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="1"
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+              placeholder="1"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reason">Reason *</Label>
+            <Label htmlFor="date">Date *</Label>
             <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              max={today}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-3">
+            <Label htmlFor="reason">Reason *</Label>
+            <Textarea
               id="reason"
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               placeholder="e.g., Stock replenishment, Damage, Transfer to branch"
+              rows={3}
             />
           </div>
-
-          {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
         </div>
+
+        {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

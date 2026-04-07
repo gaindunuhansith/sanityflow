@@ -23,6 +23,31 @@ import {
 import { useGetResourcesQuery } from "@/features/inventory/resourceApi"
 import type { InventoryTransactionType } from "@/features/inventory/inventoryTransactionApi"
 
+const LARGE_FETCH_LIMIT = 1000
+
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return "Request failed. Please try again."
+  }
+
+  const maybeError = error as { data?: unknown }
+  const data = maybeError.data
+
+  if (data && typeof data === "object") {
+    const maybeMessage = data as { message?: unknown; error?: unknown }
+
+    if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
+      return maybeMessage.message
+    }
+
+    if (typeof maybeMessage.error === "string" && maybeMessage.error.trim().length > 0) {
+      return maybeMessage.error
+    }
+  }
+
+  return "Request failed. Please try again."
+}
+
 interface InventoryTransactionFormProps {
   isOpen: boolean
   onClose: () => void
@@ -38,22 +63,44 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
     reason: "",
     date: new Date().toISOString().split("T")[0],
   })
+  const [formError, setFormError] = useState("")
 
-  const { data: resourcesResponse } = useGetResourcesQuery()
+  const { data: resourcesResponse } = useGetResourcesQuery({
+    page: 1,
+    limit: LARGE_FETCH_LIMIT,
+  })
   const resources = resourcesResponse?.items || []
 
   const [createTransaction, { isLoading }] = useCreateTransactionMutation()
 
   const handleSubmit = async () => {
-    try {
-      if (!formData.product || !formData.reason || formData.quantity <= 0) {
-        alert("Please fill all required fields")
-        return
-      }
+    const quantity = Number(formData.quantity)
+    const reason = formData.reason.trim()
 
+    if (!formData.product) {
+      setFormError("Please select a resource.")
+      return
+    }
+
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      setFormError("Quantity must be 1 or greater.")
+      return
+    }
+
+    if (!reason) {
+      setFormError("Reason is required.")
+      return
+    }
+
+    setFormError("")
+
+    try {
       await createTransaction({
-        ...formData,
-        quantity: parseInt(formData.quantity.toString()),
+        product: formData.product,
+        type: formData.type,
+        quantity,
+        reason,
+        date: formData.date,
       }).unwrap()
 
       setFormData({
@@ -63,9 +110,10 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
         reason: "",
         date: new Date().toISOString().split("T")[0],
       })
+      setFormError("")
       onClose()
     } catch (error) {
-      console.error("Error creating transaction:", error)
+      setFormError(getApiErrorMessage(error))
     }
   }
 
@@ -150,6 +198,8 @@ export function InventoryTransactionForm({ isOpen, onClose }: InventoryTransacti
               placeholder="e.g., Stock replenishment, Damage, Transfer to branch"
             />
           </div>
+
+          {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
         </div>
 
         <DialogFooter>

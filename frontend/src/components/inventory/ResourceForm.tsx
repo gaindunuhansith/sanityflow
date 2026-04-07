@@ -21,7 +21,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   useGetResourceByIdQuery,
-  useGetResourceByBarcodeQuery,
+  useLazyLookupBarcodeQuery,
   useCreateResourceMutation,
   useUpdateResourceMutation,
 } from "@/features/inventory/resourceApi"
@@ -69,19 +69,12 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
   })
   const [formError, setFormError] = useState("")
   const [barcodeInfo, setBarcodeInfo] = useState("")
-  const [barcodeLookupValue, setBarcodeLookupValue] = useState("")
 
   const { data: resource } = useGetResourceByIdQuery(resourceId || "", {
     skip: !resourceId,
   })
 
-  const {
-    data: barcodeResource,
-    isFetching: isLookingUpBarcode,
-    isError: isBarcodeLookupError,
-  } = useGetResourceByBarcodeQuery(barcodeLookupValue, {
-    skip: !barcodeLookupValue,
-  })
+  const [lookupBarcode, { isFetching: isLookingUpBarcode }] = useLazyLookupBarcodeQuery()
 
   const { data: suppliersResponse } = useGetSuppliersQuery()
   const suppliers = suppliersResponse?.items || []
@@ -116,32 +109,10 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
       })
       setFormError("")
       setBarcodeInfo("")
-      setBarcodeLookupValue("")
     }
   }, [resource, isOpen, resourceId])
 
-  useEffect(() => {
-    if (!barcodeLookupValue) {
-      return
-    }
-
-    if (barcodeResource && !resourceId) {
-      setFormData((previous) => ({
-        ...previous,
-        name: barcodeResource.name || previous.name,
-        category: barcodeResource.category || previous.category,
-        unit: barcodeResource.unit || previous.unit,
-      }))
-      setBarcodeInfo("Barcode matched an existing resource. Fields have been auto-filled.")
-      return
-    }
-
-    if (isBarcodeLookupError) {
-      setBarcodeInfo("No resource found for this barcode.")
-    }
-  }, [barcodeLookupValue, barcodeResource, isBarcodeLookupError, resourceId])
-
-  const handleBarcodeLookup = () => {
+  const handleBarcodeLookup = async () => {
     const barcode = formData.barcode.trim()
 
     if (!barcode) {
@@ -149,8 +120,23 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
       return
     }
 
-    setBarcodeInfo("")
-    setBarcodeLookupValue(barcode)
+    try {
+      const result = await lookupBarcode(barcode).unwrap()
+
+      if (!resourceId) {
+        setFormData((previous) => ({
+          ...previous,
+          name: result.name || previous.name,
+          category: result.category?.split(",")[0]?.trim() || previous.category,
+        }))
+      }
+
+      const source = result.source ?? "External API"
+      const brand = result.brand ? ` | Brand: ${result.brand}` : ""
+      setBarcodeInfo(`Auto-filled from ${source}${brand}`)
+    } catch {
+      setBarcodeInfo("No product found for this barcode.")
+    }
   }
 
   const handleSubmit = async () => {
@@ -268,6 +254,7 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
               <Input
                 id="quantity"
                 type="number"
+                min="0"
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
                 placeholder="0"
@@ -290,6 +277,7 @@ export function ResourceForm({ isOpen, onClose, resourceId }: ResourceFormProps)
               <Input
                 id="reorderLevel"
                 type="number"
+                min="0"
                 value={formData.reorderLevel}
                 onChange={(e) => setFormData({ ...formData, reorderLevel: parseInt(e.target.value) || 10 })}
                 placeholder="10"

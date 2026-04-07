@@ -16,6 +16,9 @@ import { BlogDashboard } from "./components/blog/BlogDashboard";
 import { DriverDashboard } from "./components/drivers/DriverDashboard";
 import { BeneficiaryDashboard } from "./components/beneficiaries/BeneficiaryDashboard";
 import { WeatherDashboard } from "./components/weather/WeatherDashboard";
+import { ResourceDashboard } from "./components/inventory/ResourceDashboard";
+import { SupplierDashboard } from "./components/inventory/SupplierDashboard";
+import { InventoryTransactionDashboard } from "./components/inventory/InventoryTransactionDashboard";
 
 const router = createBrowserRouter([
   {
@@ -52,6 +55,18 @@ const router = createBrowserRouter([
                   <Link to="/blog" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
                     <h2 className="text-emerald-900 font-semibold text-lg mb-2">Blog Management</h2>
                     <p className="text-sm text-gray-500">Manage dashboard blog posts and updates for the system.</p>
+                  </Link>
+                  <Link to="/resources" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Resources</h2>
+                    <p className="text-sm text-gray-500">Manage inventory resources with barcode scanning capabilities.</p>
+                  </Link>
+                  <Link to="/suppliers" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Suppliers</h2>
+                    <p className="text-sm text-gray-500">Manage supplier information and reliability ratings.</p>
+                  </Link>
+                  <Link to="/inventory-transactions" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Inventory Transactions</h2>
+                    <p className="text-sm text-gray-500">Track all inventory add, remove, and transfer transactions.</p>
                   </Link>
                 </div>
               </div>
@@ -116,6 +131,18 @@ const router = createBrowserRouter([
           {
             path: "weather",
             element: <WeatherDashboard />
+          },
+          {
+            path: "resources",
+            element: <ResourceDashboard />
+          },
+          {
+            path: "suppliers",
+            element: <SupplierDashboard />
+          },
+          {
+            path: "inventory-transactions",
+            element: <InventoryTransactionDashboard />
           },
           {
             path: "settings",

@@ -14,7 +14,9 @@ import {
   Settings,
   AlertTriangle,
   ShieldCheck,
-  LogOut
+  LogOut,
+  Boxes,
+  Store,
 } from "lucide-react";
 import { logout } from "@/features/auth/authSlice";
 import { authApi } from "@/features/auth/authApi";
@@ -43,7 +45,9 @@ const mainMenu = [
   { name: "Beneficiary", href: "/beneficiaries", icon: Users },
   { name: "Drivers", href: "/drivers", icon: Users },
   { name: "Distribution", href: "/distributions", icon: Truck },
-  { name: "Inventory", href: "/inventory", icon: Package },
+  { name: "Resources", href: "/resources", icon: Boxes },
+  { name: "Supplier", href: "/suppliers", icon: Store },
+  { name: "Inventory Transactions", href: "/inventory-transactions", icon: Package },
   { name: "Water Source", href: "/water-sources", icon: Droplets },
   { name: "Water Quality", href: "/water-tests", icon: ShieldCheck },
   { name: "Weather", href: "/weather", icon: CloudSun },

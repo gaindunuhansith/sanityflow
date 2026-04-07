@@ -1,10 +1,8 @@
-import { useMemo, useState, useEffect } from "react"
-import { Search, Plus, Pencil, Trash2, Barcode } from "lucide-react"
+import { useEffect, useMemo } from "react"
+import { Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Trash2 } from "lucide-react"
 import {
   useGetResourcesQuery,
   useDeleteResourceMutation,
-  useGetResourceByBarcodeQuery,
-  type Resource,
 } from "@/features/inventory/resourceApi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,56 +15,60 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import {
   selectResourceState,
-  setResourceSearchQuery,
-  setCreateResourceModalOpen,
   setEditingResourceId,
-  setBarcodeInput,
-  setSelectedBarcodeResource,
-  clearBarcodeInput,
+  setCreateResourceModalOpen,
+  setResourcePage,
+  setResourceSearchQuery,
+  resetResourceFilters,
 } from "@/features/inventory/resourceSlice"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { ResourceForm } from "@/components/inventory/ResourceForm"
+
+const LARGE_FETCH_LIMIT = 1000
 
 export function ResourceDashboard() {
   const dispatch = useAppDispatch()
-  const { searchQuery, page, limit, isCreateModalOpen, editingResourceId, barcodeInput } =
+  const { searchQuery, page, limit, isCreateModalOpen, editingResourceId } =
     useAppSelector(selectResourceState)
-  const [showBarcodeModal, setShowBarcodeModal] = useState(false)
-  const [debouncedBarcode, setDebouncedBarcode] = useState("")
 
-  // Debounce barcode input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (barcodeInput.trim()) {
-        setDebouncedBarcode(barcodeInput.trim())
-      }
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [barcodeInput])
-
-  const queryParams = useMemo(
-    () => ({
-      page,
-      limit,
-      ...(searchQuery.trim().length > 0 ? { search: searchQuery.trim() } : {}),
-    }),
-    [limit, page, searchQuery],
-  )
-
-  const { data: response, isLoading } = useGetResourcesQuery(queryParams)
-  const { data: barcodeResource } = useGetResourceByBarcodeQuery(debouncedBarcode, {
-    skip: !debouncedBarcode,
+  const { data: response, isLoading, refetch } = useGetResourcesQuery({
+    page: 1,
+    limit: LARGE_FETCH_LIMIT,
   })
-  const resources = response?.items || []
+
+  const resources = response?.items ?? []
+
+  const filteredResources = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase()
+
+    return resources.filter((resource) => {
+      if (!search) {
+        return true
+      }
+
+      return [
+        resource.name,
+        resource.category,
+        resource.unit,
+        resource.barcode ?? "",
+      ].some((field) => field.toLowerCase().includes(search))
+    })
+  }, [resources, searchQuery])
+
+  const totalResources = filteredResources.length
+  const totalPages = Math.max(1, Math.ceil(totalResources / limit))
+
+  const paginatedResources = useMemo(() => {
+    const start = (page - 1) * limit
+    return filteredResources.slice(start, start + limit)
+  }, [filteredResources, page, limit])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      dispatch(setResourcePage(totalPages))
+    }
+  }, [dispatch, page, totalPages])
 
   const [deleteResource] = useDeleteResourceMutation()
 
@@ -76,47 +78,61 @@ export function ResourceDashboard() {
     }
   }
 
-  const handleBarcodeFound = (resource: Resource) => {
-    dispatch(setSelectedBarcodeResource(resource._id))
-    setShowBarcodeModal(false)
-    dispatch(clearBarcodeInput())
+  const clearFilters = () => {
+    dispatch(resetResourceFilters())
   }
 
   return (
-    <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Resources Management</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowBarcodeModal(true)}>
-            <Barcode className="mr-2 h-4 w-4" /> Scan Barcode
-          </Button>
-          <Button onClick={() => dispatch(setCreateResourceModalOpen(true))}>
-            <Plus className="mr-2 h-4 w-4" /> Add Resource
-          </Button>
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Resource Management</h1>
+          <p className="text-sm text-gray-500">Manage stock items, categories, quantities, and active status.</p>
         </div>
+        <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white" onClick={() => void refetch()}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search resources..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => dispatch(setResourceSearchQuery(e.target.value))}
-          />
-        </div>
+      <div className="rounded-xl border border-gray-100 bg-gray-50/40 p-4">
+        <p className="text-sm text-gray-500">Total Resources</p>
+        <p className="text-2xl font-semibold text-gray-900">{totalResources}</p>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center p-8">
-          <div className="text-muted-foreground">Loading resources...</div>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search resources"
+                className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
+                value={searchQuery}
+                onChange={(event) => dispatch(setResourceSearchQuery(event.target.value))}
+              />
+            </div>
+
+            <Button variant="ghost" className="h-10 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 bg-white" onClick={() => void refetch()}>
+              <SlidersHorizontal className="h-4 w-4 text-gray-600" />
+            </Button>
+            <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium" onClick={() => dispatch(setCreateResourceModalOpen(true))}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Resource
+            </Button>
+          </div>
         </div>
-      ) : (
-        <div className="rounded-md border">
+
+        <div className="rounded-2xl border border-gray-100 overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/50">
+              <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Quantity</TableHead>
@@ -128,29 +144,27 @@ export function ResourceDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {resources.length > 0 ? (
-                resources.map((resource) => (
-                  <TableRow key={resource._id} className="hover:bg-muted/50">
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                    Loading resources...
+                  </TableCell>
+                </TableRow>
+              ) : paginatedResources.length > 0 ? (
+                paginatedResources.map((resource) => (
+                  <TableRow key={resource._id}>
                     <TableCell className="font-medium">{resource.name}</TableCell>
                     <TableCell>{resource.category}</TableCell>
                     <TableCell>{resource.quantity}</TableCell>
                     <TableCell>{resource.unit}</TableCell>
                     <TableCell>{resource.reorderLevel}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {resource.barcode ? (
-                        <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-mono">
-                          {resource.barcode}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
+                    <TableCell>{resource.barcode || "-"}</TableCell>
                     <TableCell>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
                           resource.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            ? "bg-[#ebf8ee] text-[#4dbd74]"
+                            : "bg-slate-100 text-slate-600"
                         }`}
                       >
                         {resource.isActive ? "Active" : "Inactive"}
@@ -178,7 +192,7 @@ export function ResourceDashboard() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
                     No resources found.
                   </TableCell>
                 </TableRow>
@@ -186,51 +200,22 @@ export function ResourceDashboard() {
             </TableBody>
           </Table>
         </div>
-      )}
 
-      {/* Barcode Modal */}
-      <Dialog open={showBarcodeModal} onOpenChange={setShowBarcodeModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Scan Resource Barcode</DialogTitle>
-            <DialogDescription>Enter or scan a barcode to find and auto-fill resource details</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Input
-              placeholder="Scan barcode here..."
-              value={barcodeInput}
-              onChange={(e) => dispatch(setBarcodeInput(e.target.value))}
-              autoFocus
-            />
-            {barcodeResource && (
-              <div className="space-y-3 p-3 bg-green-50 rounded-md border border-green-200">
-                <p className="font-semibold text-green-900">Barcode Found!</p>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-gray-600">Name:</span>
-                    <p className="font-medium">{barcodeResource.name}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Category:</span>
-                    <p className="font-medium">{barcodeResource.category}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Quantity:</span>
-                    <p className="font-medium">{barcodeResource.quantity}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Unit:</span>
-                    <p className="font-medium">{barcodeResource.unit}</p>
-                  </div>
-                </div>
-                <Button onClick={() => handleBarcodeFound(barcodeResource)} className="w-full">
-                  Use This Resource
-                </Button>
-              </div>
-            )}
+        <div className="flex items-center justify-between text-sm text-gray-600">
+          <p>
+            Showing {paginatedResources.length} of {totalResources} resources
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => dispatch(setResourcePage(page - 1))}>
+              Previous
+            </Button>
+            <span>Page {page} / {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => dispatch(setResourcePage(page + 1))}>
+              Next
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
 
       {/* Create/Edit Modal */}
       <ResourceForm

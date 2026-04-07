@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Trash2 } from "lucide-react"
 import {
   useGetSuppliersQuery,
@@ -6,6 +6,13 @@ import {
 } from "@/features/inventory/supplierApi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -31,6 +38,9 @@ export function SupplierDashboard() {
   const dispatch = useAppDispatch()
   const { searchQuery, page, limit, isCreateModalOpen, editingSuppllierId } =
     useAppSelector(selectSupplierState)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [ratingFilter, setRatingFilter] = useState<"all" | "high" | "medium" | "low">("all")
+  const [contactFilter, setContactFilter] = useState<"all" | "complete" | "incomplete">("all")
 
   const { data: response, isLoading, refetch } = useGetSuppliersQuery({
     page: 1,
@@ -43,6 +53,30 @@ export function SupplierDashboard() {
     const search = searchQuery.trim().toLowerCase()
 
     return suppliers.filter((supplier) => {
+      if (ratingFilter === "high" && supplier.reliabilityRating < 4) {
+        return false
+      }
+
+      if (ratingFilter === "medium" && (supplier.reliabilityRating < 2 || supplier.reliabilityRating > 3)) {
+        return false
+      }
+
+      if (ratingFilter === "low" && supplier.reliabilityRating > 1) {
+        return false
+      }
+
+      const hasCompleteContact = Boolean(
+        supplier.contact?.email?.trim() && supplier.contact?.phone?.trim() && supplier.contact?.address?.trim(),
+      )
+
+      if (contactFilter === "complete" && !hasCompleteContact) {
+        return false
+      }
+
+      if (contactFilter === "incomplete" && hasCompleteContact) {
+        return false
+      }
+
       if (!search) {
         return true
       }
@@ -55,7 +89,7 @@ export function SupplierDashboard() {
         field.toLowerCase().includes(search),
       )
     })
-  }, [suppliers, searchQuery])
+  }, [suppliers, searchQuery, ratingFilter, contactFilter])
 
   const totalSuppliers = filteredSuppliers.length
   const totalPages = Math.max(1, Math.ceil(totalSuppliers / limit))
@@ -112,14 +146,23 @@ export function SupplierDashboard() {
             <Button
               variant="ghost"
               className="h-10 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-              onClick={() => dispatch(resetSupplierFilters())}
+              onClick={() => {
+                dispatch(resetSupplierFilters())
+                setRatingFilter("all")
+                setContactFilter("all")
+              }}
             >
               Clear Filters
             </Button>
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 bg-white" onClick={() => void refetch()}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl h-10 w-10 border-gray-200 bg-white"
+              onClick={() => setShowAdvancedFilters((current) => !current)}
+            >
               <SlidersHorizontal className="h-4 w-4 text-gray-600" />
             </Button>
             <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium" onClick={() => dispatch(setCreateSupplierModalOpen(true))}>
@@ -128,6 +171,38 @@ export function SupplierDashboard() {
             </Button>
           </div>
         </div>
+
+        {showAdvancedFilters ? (
+          <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 flex flex-wrap items-center gap-3">
+            <Select value={ratingFilter} onValueChange={(value) => setRatingFilter(value as "all" | "high" | "medium" | "low") }>
+              <SelectTrigger className="w-44 h-10 rounded-xl border-gray-200 bg-white">
+                <SelectValue placeholder="Rating" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ratings</SelectItem>
+                <SelectItem value="high">High (4-5)</SelectItem>
+                <SelectItem value="medium">Medium (2-3)</SelectItem>
+                <SelectItem value="low">Low (1)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={contactFilter} onValueChange={(value) => setContactFilter(value as "all" | "complete" | "incomplete") }>
+              <SelectTrigger className="w-48 h-10 rounded-xl border-gray-200 bg-white">
+                <SelectValue placeholder="Contact Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Contacts</SelectItem>
+                <SelectItem value="complete">Complete Contact</SelectItem>
+                <SelectItem value="incomplete">Incomplete Contact</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white" onClick={() => void refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Data
+            </Button>
+          </div>
+        ) : null}
 
         <div className="rounded-2xl border border-gray-100 overflow-hidden">
           <Table>

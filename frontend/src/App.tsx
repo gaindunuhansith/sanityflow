@@ -14,6 +14,7 @@ import { BeneficiaryDashboard } from "./components/beneficiaries/BeneficiaryDash
 import { ResourceDashboard } from "./components/inventory/ResourceDashboard";
 import { SupplierDashboard } from "./components/inventory/SupplierDashboard";
 import { InventoryTransactionDashboard } from "./components/inventory/InventoryTransactionDashboard";
+import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
 
 const router = createBrowserRouter([
   {
@@ -63,6 +64,10 @@ const router = createBrowserRouter([
                     <h2 className="text-emerald-900 font-semibold text-lg mb-2">Inventory Transactions</h2>
                     <p className="text-sm text-gray-500">Track all inventory add, remove, and transfer transactions.</p>
                   </Link>
+                  <Link to="/analytics" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Analytics Dashboard</h2>
+                    <p className="text-sm text-gray-500">View comprehensive analytics and weather-water quality correlations.</p>
+                  </Link>
                 </div>
               </div>
             ),
@@ -110,6 +115,10 @@ const router = createBrowserRouter([
           {
             path: "inventory-transactions",
             element: <InventoryTransactionDashboard />
+          },
+          {
+            path: "analytics",
+            element: <AnalyticsDashboard />
           },
           {
             path: "settings",

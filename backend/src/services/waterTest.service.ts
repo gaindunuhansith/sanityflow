@@ -154,7 +154,14 @@ export const getWaterTestAnalyticsService = async (sourceId?: string) => {
         avgPH: { $avg: '$pH' },
         avgTDS: { $avg: '$tds' },
         avgTurbidity: { $avg: '$turbidity' },
+        avgTemperature: { $avg: '$temperature' },
+        avgHumidity: { $avg: '$humidity' },
+        avgPressure: { $avg: '$pressure' },
+        avgWindSpeed: { $avg: '$windSpeed' },
         totalTests: { $sum: 1 },
+        testsWithWeatherData: {
+          $sum: { $cond: [{ $ne: ['$temperature', null] }, 1, 0] }
+        },
         unsafeCount: {
           $sum: { $cond: [{ $eq: ['$status', 'Unsafe'] }, 1, 0] }
         },

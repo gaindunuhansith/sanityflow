@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react"
-import { Search, SlidersHorizontal, Plus, Download, Pencil, ShieldCheck, Trash2 } from "lucide-react"
-import { Link } from "react-router-dom"
-import { useDeleteWaterTestMutation, useGetWaterTestsQuery } from "@/features/water-tests/waterTestApi"
+import { useState } from "react"
+import { Search, Plus, Download, Pencil, Trash2, ShieldCheck, SlidersHorizontal } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -13,12 +12,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  if (Number.isNaN(date.getTime())) return "Invalid date"
-  return date.toLocaleDateString()
-}
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useGetWaterTestsQuery, useCreateWaterTestMutation, useUpdateWaterTestMutation, useDeleteWaterTestMutation } from "@/features/water-tests/waterTestApi"
+import { useGetWaterSourcesQuery } from "@/features/water-sources/waterSourceApi"
+import { toast } from "sonner"
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog"
 
 const getSourceName = (waterSource: unknown) => {
   if (waterSource && typeof waterSource === "object" && "name" in waterSource) {
@@ -34,41 +46,206 @@ const getTesterName = (tester: unknown) => {
   return "Unknown Tester"
 }
 
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
 export function WaterTestDashboard() {
-  const { data: tests, isLoading, error } = useGetWaterTestsQuery()
+  const { data: tests = [], refetch } = useGetWaterTestsQuery()
+  const { data: waterSources = [] } = useGetWaterSourcesQuery()
+  const [createWaterTest] = useCreateWaterTestMutation()
+  const [updateWaterTest] = useUpdateWaterTestMutation()
   const [deleteWaterTest] = useDeleteWaterTestMutation()
-  const [searchTerm, setSearchTerm] = useState("")
 
-  const filteredTests = useMemo(() => {
-    if (!Array.isArray(tests)) return []
-    const term = searchTerm.trim().toLowerCase()
-    if (!term) return tests
+  // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [editingTestId, setEditingTestId] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [testToDelete, setTestToDelete] = useState<string | null>(null)
 
-    return tests.filter((test) => {
-      const sourceName = getSourceName(test.waterSource).toLowerCase()
-      return (
-        sourceName.includes(term) ||
-        test._id.toLowerCase().includes(term) ||
-        test.status.toLowerCase().includes(term)
-      )
-    })
-  }, [searchTerm, tests])
+  // Form states
+  const [createWaterSource, setCreateWaterSource] = useState('')
+  const [createTestDate, setCreateTestDate] = useState('')
+  const [createPH, setCreatePH] = useState('')
+  const [createTDS, setCreateTDS] = useState('')
+  const [createTurbidity, setCreateTurbidity] = useState('')
+  const [createContaminants, setCreateContaminants] = useState('')
+  const [createNotes, setCreateNotes] = useState('')
+  const [createFormError, setCreateFormError] = useState('')
+
+  const [editPH, setEditPH] = useState('')
+  const [editTDS, setEditTDS] = useState('')
+  const [editTurbidity, setEditTurbidity] = useState('')
+  const [editContaminants, setEditContaminants] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+  const [editFormError, setEditFormError] = useState('')
+
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState("")
+
+  // Apply filtering
+  const filteredTests = tests.filter(test => {
+    const matchesSearch = (getSourceName(test.waterSource) || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (test._id || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (test.status || "").toLowerCase().includes(searchQuery.toLowerCase())
+
+    return matchesSearch
+  })
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this water test?")) {
-      return
-    }
+    setTestToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!testToDelete) return
 
     try {
-      await deleteWaterTest(id).unwrap()
-    } catch (deleteError) {
-      console.error("Failed to delete water test", deleteError)
-      window.alert("Failed to delete water test. Please try again.")
+      await deleteWaterTest(testToDelete).unwrap()
+      toast.success("Water test deleted successfully")
+      refetch()
+      setDeleteDialogOpen(false)
+      setTestToDelete(null)
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || "Failed to delete water test"
+      console.error("Failed to delete water test:", err)
+      alert(`Error: ${errorMessage}`)
+      setDeleteDialogOpen(false)
+      setTestToDelete(null)
     }
   }
 
-  if (isLoading) return <div>Loading water tests...</div>
-  if (error) return <div>Error loading water tests</div>
+  const resetCreateForm = () => {
+    setCreateWaterSource('')
+    setCreateTestDate('')
+    setCreatePH('')
+    setCreateTDS('')
+    setCreateTurbidity('')
+    setCreateContaminants('')
+    setCreateNotes('')
+    setCreateFormError('')
+  }
+
+  const handleCreateWaterTest = async () => {
+    if (!createWaterSource.trim() || !createTestDate.trim() || !createPH.trim() || !createTDS.trim() || !createTurbidity.trim()) {
+      setCreateFormError('Water source, test date, pH, TDS, and turbidity are required')
+      return
+    }
+
+    const pH = parseFloat(createPH)
+    const tds = parseInt(createTDS)
+    const turbidity = parseFloat(createTurbidity)
+
+    if (isNaN(pH) || pH < 0 || pH > 14) {
+      setCreateFormError('pH must be a number between 0 and 14')
+      return
+    }
+
+    if (isNaN(tds) || tds < 0) {
+      setCreateFormError('TDS must be a positive number')
+      return
+    }
+
+    if (isNaN(turbidity) || turbidity < 0) {
+      setCreateFormError('Turbidity must be a positive number')
+      return
+    }
+
+    const contaminants = createContaminants.trim() ? createContaminants.split(',').map(c => c.trim()).filter(c => c) : []
+
+    try {
+      await createWaterTest({
+        waterSource: createWaterSource,
+        pH: pH,
+        tds: tds,
+        turbidity: turbidity,
+        contaminants: contaminants,
+        notes: createNotes || undefined,
+      }).unwrap()
+
+      resetCreateForm()
+      setIsCreateDialogOpen(false)
+      refetch()
+      toast.success("Water test created successfully")
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || 'Failed to create water test'
+      setCreateFormError(errorMessage)
+    }
+  }
+
+  const openEditDialog = (testId: string) => {
+    const test = tests.find(t => t._id === testId)
+    if (test) {
+      setEditPH(test.pH.toString())
+      setEditTDS(test.tds.toString())
+      setEditTurbidity(test.turbidity.toString())
+      setEditContaminants(test.contaminants.join(', '))
+      setEditNotes(test.notes || '')
+      setEditFormError('')
+      setEditingTestId(testId)
+    }
+  }
+
+  const closeEditDialog = () => {
+    setEditingTestId(null)
+    setEditFormError('')
+  }
+
+  const handleUpdateWaterTest = async () => {
+    if (!editingTestId || !editPH.trim() || !editTDS.trim() || !editTurbidity.trim()) {
+      setEditFormError('pH, TDS, and turbidity are required')
+      return
+    }
+
+    const pH = parseFloat(editPH)
+    const tds = parseInt(editTDS)
+    const turbidity = parseFloat(editTurbidity)
+
+    if (isNaN(pH) || pH < 0 || pH > 14) {
+      setEditFormError('pH must be a number between 0 and 14')
+      return
+    }
+
+    if (isNaN(tds) || tds < 0) {
+      setEditFormError('TDS must be a positive number')
+      return
+    }
+
+    if (isNaN(turbidity) || turbidity < 0) {
+      setEditFormError('Turbidity must be a positive number')
+      return
+    }
+
+    const contaminants = editContaminants.trim() ? editContaminants.split(',').map(c => c.trim()).filter(c => c) : []
+
+    try {
+      await updateWaterTest({
+        id: editingTestId,
+        body: {
+          pH: pH,
+          tds: tds,
+          turbidity: turbidity,
+          contaminants: contaminants,
+          notes: editNotes || undefined,
+        }
+      }).unwrap()
+
+      closeEditDialog()
+      refetch()
+      toast.success("Water test updated successfully")
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || 'Failed to update water test'
+      setEditFormError(errorMessage)
+    }
+  }
+
+  const handleEdit = (test: any) => {
+    openEditDialog(test._id)
+  }
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
@@ -89,21 +266,20 @@ export function WaterTestDashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search source or ID"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-emerald-500"
             />
           </div>
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-          <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium asChild">
-            <Link to="/water-tests/new">
-              <span className="flex items-center">
-                 <Plus className="mr-2 h-4 w-4" />
-                 Log New Test
-              </span>
-            </Link>
+          <Button
+            className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Log New Test
           </Button>
           <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
             <Download className="mr-2 h-4 w-4" />
@@ -166,8 +342,13 @@ export function WaterTestDashboard() {
                 </TableCell>
                 <TableCell className="text-right pr-6 py-4">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 asChild">
-                      <Link to={`/water-tests/edit/${test._id}`}><Pencil className="h-4 w-4" /></Link>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-emerald-600"
+                      onClick={() => handleEdit(test)}
+                    >
+                      <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -184,6 +365,213 @@ export function WaterTestDashboard() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Create Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Log New Water Quality Test</DialogTitle>
+            <DialogDescription>
+              Enter the water quality test details below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="createWaterSource">Water Source *</Label>
+                <Select value={createWaterSource} onValueChange={setCreateWaterSource}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select water source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {waterSources.map((source) => (
+                      <SelectItem key={source._id} value={source._id}>
+                        {source.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="createTestDate">Test Date *</Label>
+                <Input
+                  id="createTestDate"
+                  type="date"
+                  value={createTestDate}
+                  onChange={(e) => setCreateTestDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="createPH">pH Level *</Label>
+                <Input
+                  id="createPH"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="14"
+                  value={createPH}
+                  onChange={(e) => setCreatePH(e.target.value)}
+                  placeholder="7.0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="createTDS">TDS (ppm) *</Label>
+                <Input
+                  id="createTDS"
+                  type="number"
+                  min="0"
+                  value={createTDS}
+                  onChange={(e) => setCreateTDS(e.target.value)}
+                  placeholder="50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="createTurbidity">Turbidity (NTU) *</Label>
+                <Input
+                  id="createTurbidity"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={createTurbidity}
+                  onChange={(e) => setCreateTurbidity(e.target.value)}
+                  placeholder="1.0"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="createContaminants">Contaminants</Label>
+              <Input
+                id="createContaminants"
+                value={createContaminants}
+                onChange={(e) => setCreateContaminants(e.target.value)}
+                placeholder="Comma-separated list (e.g., bacteria, heavy metals)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="createNotes">Notes</Label>
+              <Input
+                id="createNotes"
+                value={createNotes}
+                onChange={(e) => setCreateNotes(e.target.value)}
+                placeholder="Additional observations"
+              />
+            </div>
+            {createFormError && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                {createFormError}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateWaterTest}
+              className="bg-[#0F392B] hover:bg-[#0F392B]/90"
+            >
+              Log Test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingTestId} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Water Quality Test</DialogTitle>
+            <DialogDescription>
+              Update the water quality test details below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editPH">pH Level *</Label>
+                <Input
+                  id="editPH"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="14"
+                  value={editPH}
+                  onChange={(e) => setEditPH(e.target.value)}
+                  placeholder="7.0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editTDS">TDS (ppm) *</Label>
+                <Input
+                  id="editTDS"
+                  type="number"
+                  min="0"
+                  value={editTDS}
+                  onChange={(e) => setEditTDS(e.target.value)}
+                  placeholder="50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editTurbidity">Turbidity (NTU) *</Label>
+                <Input
+                  id="editTurbidity"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editTurbidity}
+                  onChange={(e) => setEditTurbidity(e.target.value)}
+                  placeholder="1.0"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editContaminants">Contaminants</Label>
+              <Input
+                id="editContaminants"
+                value={editContaminants}
+                onChange={(e) => setEditContaminants(e.target.value)}
+                placeholder="Comma-separated list (e.g., bacteria, heavy metals)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editNotes">Notes</Label>
+              <Input
+                id="editNotes"
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                placeholder="Additional observations"
+              />
+            </div>
+            {editFormError && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                {editFormError}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateWaterTest}
+              className="bg-[#0F392B] hover:bg-[#0F392B]/90"
+            >
+              Update Test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Delete Water Quality Test"
+        description="Are you sure you want to delete this water quality test? This action cannot be undone."
+      />
     </div>
   )
 }

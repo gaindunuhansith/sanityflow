@@ -16,7 +16,6 @@ import {
   LogOut,
   Boxes,
   Store,
-  BarChart3,
 } from "lucide-react";
 import { logout } from "@/features/auth/authSlice";
 import { authApi } from "@/features/auth/authApi";
@@ -50,7 +49,6 @@ const mainMenu = [
   { name: "Inventory Transactions", href: "/inventory-transactions", icon: Package },
   { name: "Water Source", href: "/water-sources", icon: Droplets },
   { name: "Water Quality", href: "/water-tests", icon: ShieldCheck },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
   
 ];
 

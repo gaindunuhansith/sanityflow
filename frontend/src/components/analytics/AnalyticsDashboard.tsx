@@ -239,9 +239,9 @@ export function AnalyticsDashboard() {
                         {getSourceName(item._id.waterSource)}
                       </td>
                       <td className="py-3 px-4 text-center">{item.totalTests}</td>
-                      <td className="py-3 px-4 text-center">{item.avgPH.toFixed(2)}</td>
-                      <td className="py-3 px-4 text-center">{item.avgTDS.toFixed(0)} ppm</td>
-                      <td className="py-3 px-4 text-center">{item.avgTurbidity.toFixed(2)} NTU</td>
+                      <td className="py-3 px-4 text-center">{item.avgPH ? item.avgPH.toFixed(2) : 'N/A'}</td>
+                      <td className="py-3 px-4 text-center">{item.avgTDS ? `${item.avgTDS.toFixed(0)} ppm` : 'N/A'}</td>
+                      <td className="py-3 px-4 text-center">{item.avgTurbidity ? `${item.avgTurbidity.toFixed(2)} NTU` : 'N/A'}</td>
                       <td className="py-3 px-4 text-center">
                         {item.avgTemperature !== undefined ? (
                           <div className="flex items-center justify-center gap-1">

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ShieldAlert } from "lucide-react"
+import { ShieldAlert, Cloud, Thermometer, Droplets, Wind } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import {
   useCreateWaterTestMutation,
@@ -16,8 +16,8 @@ import { useGetWaterSourcesQuery } from "@/features/water-sources/waterSourceApi
 const parseContaminants = (raw: string) =>
   raw
     .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item && item !== 'none' && item !== 'n/a' && item !== 'na' && item !== 'nil' && item !== 'null' && item !== '-')
 
 const getSourceId = (value: unknown) => {
   if (typeof value === "string") return value
@@ -174,6 +174,14 @@ export function CreateWaterTestForm() {
           </div>
         </div>
 
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
+          <Cloud className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <p className="font-semibold mb-1">Weather Data Integration</p>
+            <p>Temperature, humidity, pressure, and wind conditions will be automatically captured from the water source location for scientific correlation.</p>
+          </div>
+        </div>
+
         {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
 
         <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-100 mt-6">
@@ -263,6 +271,42 @@ export function UpdateWaterTestForm() {
           <Label className="text-gray-700 font-semibold">Target Water Source</Label>
           <Input value={getSourceId(test.waterSource)} disabled className="h-11 rounded-xl bg-gray-50" />
         </div>
+
+        {test.temperature !== undefined && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <Cloud className="h-4 w-4" />
+              Weather Conditions at Time of Test
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Thermometer className="h-3 w-3 text-blue-600" />
+                <span className="text-blue-800">{test.temperature.toFixed(1)}°C</span>
+              </div>
+              {test.weatherCondition && (
+                <div className="flex items-center gap-2">
+                  <Cloud className="h-3 w-3 text-blue-600" />
+                  <span className="text-blue-800 capitalize">{test.weatherCondition}</span>
+                </div>
+              )}
+              {test.humidity !== undefined && (
+                <div className="flex items-center gap-2">
+                  <Droplets className="h-3 w-3 text-blue-600" />
+                  <span className="text-blue-800">{test.humidity}% humidity</span>
+                </div>
+              )}
+              {test.windSpeed !== undefined && (
+                <div className="flex items-center gap-2">
+                  <Wind className="h-3 w-3 text-blue-600" />
+                  <span className="text-blue-800">{test.windSpeed.toFixed(1)} m/s</span>
+                </div>
+              )}
+            </div>
+            {test.weatherDescription && (
+              <p className="text-xs text-blue-700 mt-3 italic">{test.weatherDescription}</p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">

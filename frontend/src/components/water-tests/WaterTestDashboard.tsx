@@ -155,7 +155,11 @@ export function WaterTestDashboard() {
       return
     }
 
-    const contaminants = createContaminants.trim() ? createContaminants.split(',').map(c => c.trim()).filter(c => c) : []
+    const contaminants = createContaminants.trim() 
+      ? createContaminants.split(',')
+          .map(c => c.trim().toLowerCase())
+          .filter(c => c && c !== 'none' && c !== 'n/a' && c !== 'na' && c !== 'nil' && c !== 'null' && c !== '-')
+      : []
 
     try {
       await createWaterTest({
@@ -220,7 +224,11 @@ export function WaterTestDashboard() {
       return
     }
 
-    const contaminants = editContaminants.trim() ? editContaminants.split(',').map(c => c.trim()).filter(c => c) : []
+    const contaminants = editContaminants.trim() 
+      ? editContaminants.split(',')
+          .map(c => c.trim().toLowerCase())
+          .filter(c => c && c !== 'none' && c !== 'n/a' && c !== 'na' && c !== 'nil' && c !== 'null' && c !== '-')
+      : []
 
     try {
       await updateWaterTest({

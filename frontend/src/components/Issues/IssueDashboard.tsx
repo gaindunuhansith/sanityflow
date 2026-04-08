@@ -1,9 +1,9 @@
 import React, { useState } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, Pencil, Trash2, AlertTriangle, Hammer, Droplets, MapPin, Loader2 } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Search, ChevronDown, Download, Pencil, Trash2, AlertTriangle, Hammer, Droplets, MapPin, Loader2, Plus } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -19,8 +19,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useGetIssuesQuery, useDeleteIssueMutation } from "@/features/issues/issueApi"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useGetIssuesQuery, useCreateIssueMutation, useUpdateIssueMutation, useDeleteIssueMutation } from "@/features/issues/issueApi"
 import { format } from "date-fns"
+import { toast } from "sonner"
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog"
 
 const getCategoryIcon = (category: string) => {
   switch (category?.toLowerCase()) {
@@ -33,9 +43,35 @@ const getCategoryIcon = (category: string) => {
 }
 
 export function IssueDashboard() {
-  const { data: issuesData, isLoading, error } = useGetIssuesQuery()
+  const { data: issuesData, isLoading, error, refetch } = useGetIssuesQuery()
+  const [createIssue, { isLoading: isCreating }] = useCreateIssueMutation()
+  const [updateIssue, { isLoading: isUpdating }] = useUpdateIssueMutation()
   const [deleteIssue, { isLoading: isDeleting }] = useDeleteIssueMutation()
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
+
+  // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [issueToDelete, setIssueToDelete] = useState<string | null>(null)
+
+  // Form states
+  const [createIssueType, setCreateIssueType] = useState<'Water Quality' | 'Water Shortage' | 'Infrastructure' | 'Other'>('Water Quality')
+  const [createDescription, setCreateDescription] = useState('')
+  const [createLocation, setCreateLocation] = useState('')
+  const [createPriority, setCreatePriority] = useState<'Low' | 'Medium' | 'High'>('Medium')
+  const [createPhoto, setCreatePhoto] = useState('')
+  const [createFormError, setCreateFormError] = useState('')
+
+  const [editIssueType, setEditIssueType] = useState<'Water Quality' | 'Water Shortage' | 'Infrastructure' | 'Other'>('Water Quality')
+  const [editDescription, setEditDescription] = useState('')
+  const [editLocation, setEditLocation] = useState('')
+  const [editPriority, setEditPriority] = useState<'Low' | 'Medium' | 'High'>('Medium')
+  const [editPhoto, setEditPhoto] = useState('')
+  const [editStatus, setEditStatus] = useState<'Pending' | 'In Progress' | 'Resolved'>('Pending')
+  const [editAssignedTo, setEditAssignedTo] = useState('')
+  const [editResolutionNotes, setEditResolutionNotes] = useState('')
+  const [editFormError, setEditFormError] = useState('')
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("")
@@ -69,12 +105,108 @@ export function IssueDashboard() {
   }
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this issue?")) {
-      try {
-        await deleteIssue(id).unwrap()
-      } catch (err) {
-        console.error("Failed to delete issue", err)
-      }
+    setIssueToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!issueToDelete) return
+
+    try {
+      await deleteIssue(issueToDelete).unwrap()
+      toast.success("Issue deleted successfully")
+      refetch()
+      setDeleteDialogOpen(false)
+      setIssueToDelete(null)
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || "Failed to delete issue"
+      console.error("Failed to delete issue:", err)
+      alert(`Error: ${errorMessage}`)
+      setDeleteDialogOpen(false)
+      setIssueToDelete(null)
+    }
+  }
+
+  const resetCreateForm = () => {
+    setCreateIssueType('Water Quality')
+    setCreateDescription('')
+    setCreateLocation('')
+    setCreatePriority('Medium')
+    setCreatePhoto('')
+    setCreateFormError('')
+  }
+
+  const handleCreateIssue = async () => {
+    if (!createDescription.trim() || !createLocation.trim()) {
+      setCreateFormError('Description and location are required')
+      return
+    }
+
+    try {
+      await createIssue({
+        issueType: createIssueType,
+        description: createDescription.trim(),
+        location: createLocation.trim(),
+        priority: createPriority,
+        photo: createPhoto || undefined,
+      }).unwrap()
+      
+      resetCreateForm()
+      setIsCreateDialogOpen(false)
+      refetch()
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || 'Failed to create issue'
+      setCreateFormError(errorMessage)
+    }
+  }
+
+  const openEditDialog = (issueId: string) => {
+    const issue = issues.find(i => i._id === issueId)
+    if (issue) {
+      setEditIssueType(issue.issueType)
+      setEditDescription(issue.description)
+      setEditLocation(issue.location)
+      setEditPriority(issue.priority)
+      setEditPhoto(issue.photo || '')
+      setEditStatus(issue.status)
+      setEditAssignedTo(issue.assignedTo?.name || '')
+      setEditResolutionNotes(issue.resolutionNotes || '')
+      setEditFormError('')
+      setEditingIssueId(issueId)
+    }
+  }
+
+  const closeEditDialog = () => {
+    setEditingIssueId(null)
+    setEditFormError('')
+  }
+
+  const handleUpdateIssue = async () => {
+    if (!editingIssueId || !editDescription.trim() || !editLocation.trim()) {
+      setEditFormError('Description and location are required')
+      return
+    }
+
+    try {
+      await updateIssue({
+        id: editingIssueId,
+        body: {
+          issueType: editIssueType,
+          description: editDescription.trim(),
+          location: editLocation.trim(),
+          photo: editPhoto || undefined,
+          priority: editPriority,
+          status: editStatus,
+          assignedTo: editAssignedTo || undefined,
+          resolutionNotes: editResolutionNotes || undefined,
+        }
+      }).unwrap()
+      
+      closeEditDialog()
+      refetch()
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || 'Failed to update issue'
+      setEditFormError(errorMessage)
     }
   }
 
@@ -83,21 +215,6 @@ export function IssueDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Issue Reports</h1>
-        <div className="flex items-center gap-3">
-          <Select defaultValue="this-month">
-            <SelectTrigger className="w-32.5 rounded-xl h-10 border-gray-200 bg-white">
-              <SelectValue placeholder="Period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="this-month">This Month</SelectItem>
-              <SelectItem value="last-month">Last Month</SelectItem>
-              <SelectItem value="this-year">This Year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 bg-white">
-            <SlidersHorizontal className="h-4 w-4 text-gray-600" />
-          </Button>
-        </div>
       </div>
 
       {/* Filters Bar */}
@@ -137,21 +254,27 @@ export function IssueDashboard() {
               <SelectItem value="low">Low</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setSearchQuery("")
+              setCategoryFilter("all")
+              setPriorityFilter("all")
+            }}
+            className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium"
+          >
+            Clear Filters
+          </Button>
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-          <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
-            <Calendar className="mr-2 h-4 w-4 text-gray-500" />
-            1-30 September 2028
-            <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
-          </Button>
-          <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium" asChild>
-            <Link to="/issues/new">
-              <span className="flex items-center">
-                 <AlertTriangle className="mr-2 h-4 w-4" />
-                 Report Issue
-              </span>
-            </Link>
+          <Button 
+            className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Report Issue
           </Button>
           <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
             <Download className="mr-2 h-4 w-4" />
@@ -219,10 +342,8 @@ export function IssueDashboard() {
                     </TableCell>
                     <TableCell className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50" asChild>
-                            <Link to={`/issues/edit/${issue._id}`}>
-                            <Pencil className="h-4 w-4" />
-                          </Link>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50" onClick={() => openEditDialog(issue._id)}>
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -263,6 +384,221 @@ export function IssueDashboard() {
           </Table>
         )}
       </div>
+
+      {/* Create Issue Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Report New Issue</DialogTitle>
+            <DialogDescription>Submit a new issue report for review and resolution.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="create-issue-type">Issue Type</Label>
+              <Select value={createIssueType} onValueChange={(value: any) => setCreateIssueType(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select issue type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Water Quality">Water Quality</SelectItem>
+                  <SelectItem value="Water Shortage">Water Shortage</SelectItem>
+                  <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="create-description">Description</Label>
+              <Input
+                id="create-description"
+                value={createDescription}
+                onChange={(event) => setCreateDescription(event.target.value)}
+                placeholder="Describe the issue in detail"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="create-location">Location</Label>
+              <Input
+                id="create-location"
+                value={createLocation}
+                onChange={(event) => setCreateLocation(event.target.value)}
+                placeholder="Where did this issue occur?"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="create-priority">Priority</Label>
+              <Select value={createPriority} onValueChange={(value: any) => setCreatePriority(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="create-photo">Photo URL (Optional)</Label>
+              <Input
+                id="create-photo"
+                value={createPhoto}
+                onChange={(event) => setCreatePhoto(event.target.value)}
+                placeholder="Enter photo URL if available"
+              />
+            </div>
+
+            {createFormError && <p className="text-sm text-rose-600">{createFormError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateIssue} 
+              disabled={isCreating}
+              className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white"
+            >
+              {isCreating ? "Reporting..." : "Report Issue"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Issue Dialog */}
+      <Dialog open={!!editingIssueId} onOpenChange={(isOpen) => (!isOpen ? closeEditDialog() : undefined)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Update Issue</DialogTitle>
+            <DialogDescription>Modify all issue details, status, and assignment information.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-issue-type">Issue Type</Label>
+              <Select value={editIssueType} onValueChange={(value: any) => setEditIssueType(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select issue type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Water Quality">Water Quality</SelectItem>
+                  <SelectItem value="Water Shortage">Water Shortage</SelectItem>
+                  <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2 col-span-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Input
+                id="edit-description"
+                value={editDescription}
+                onChange={(event) => setEditDescription(event.target.value)}
+                placeholder="Describe the issue in detail"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                value={editLocation}
+                onChange={(event) => setEditLocation(event.target.value)}
+                placeholder="Where did this issue occur?"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-priority">Priority</Label>
+              <Select value={editPriority} onValueChange={(value: any) => setEditPriority(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2 col-span-2">
+              <Label htmlFor="edit-photo">Photo URL (Optional)</Label>
+              <Input
+                id="edit-photo"
+                value={editPhoto}
+                onChange={(event) => setEditPhoto(event.target.value)}
+                placeholder="Enter photo URL if available"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-status">Status</Label>
+              <Select value={editStatus} onValueChange={(value: any) => setEditStatus(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="In Progress">In Progress</SelectItem>
+                  <SelectItem value="Resolved">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-assigned-to">Assigned To</Label>
+              <Input
+                id="edit-assigned-to"
+                value={editAssignedTo}
+                onChange={(event) => setEditAssignedTo(event.target.value)}
+                placeholder="Assign to a team member"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-resolution-notes">Resolution Notes</Label>
+              <Input
+                id="edit-resolution-notes"
+                value={editResolutionNotes}
+                onChange={(event) => setEditResolutionNotes(event.target.value)}
+                placeholder="Add resolution details"
+              />
+            </div>
+
+            {editFormError && <p className="text-sm text-rose-600">{editFormError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateIssue} 
+              disabled={isUpdating}
+              className="bg-[#0F392B] hover:bg-[#0F392B]/90 text-white"
+            >
+              {isUpdating ? "Updating..." : "Update Issue"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Delete Issue"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

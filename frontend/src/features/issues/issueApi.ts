@@ -26,6 +26,11 @@ export type CreateIssueData = {
 }
 
 export type UpdateIssueData = {
+  issueType?: 'Water Quality' | 'Water Shortage' | 'Infrastructure' | 'Other';
+  description?: string;
+  location?: string;
+  photo?: string;
+  priority?: 'Low' | 'Medium' | 'High';
   status?: 'Pending' | 'In Progress' | 'Resolved';
   assignedTo?: string;
   resolutionNotes?: string;

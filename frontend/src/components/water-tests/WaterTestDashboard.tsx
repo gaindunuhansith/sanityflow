@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Search, Plus, Download, Pencil, Trash2, ShieldCheck, SlidersHorizontal } from "lucide-react"
+import { Search, Plus, Download, Pencil, Trash2, ShieldCheck, SlidersHorizontal, Cloud, Thermometer, Droplets, Wind } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -295,6 +295,7 @@ export function WaterTestDashboard() {
             <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
               <TableHead className="text-gray-500 font-semibold text-xs py-4 pl-4">Water Source & Date</TableHead>
               <TableHead className="text-gray-500 font-semibold text-xs py-4">Key Metrics</TableHead>
+              <TableHead className="text-gray-500 font-semibold text-xs py-4">Weather Conditions</TableHead>
               <TableHead className="text-gray-500 font-semibold text-xs py-4 text-center">Contaminants</TableHead>
               <TableHead className="text-gray-500 font-semibold text-xs py-4 text-center">Final Result</TableHead>
               <TableHead className="text-gray-500 font-semibold text-xs text-right pr-6 py-4">Actions</TableHead>
@@ -325,6 +326,36 @@ export function WaterTestDashboard() {
                       <div><span className="font-semibold text-gray-400 w-16 inline-block">TDS:</span> {test.tds} ppm</div>
                       <div><span className="font-semibold text-gray-400 w-16 inline-block">Turbid:</span> {test.turbidity} NTU</div>
                    </div>
+                </TableCell>
+                <TableCell className="py-4">
+                  {test.temperature !== undefined ? (
+                    <div className="flex flex-col gap-1 text-sm">
+                      <div className="flex items-center gap-1 text-gray-600">
+                        <Thermometer className="h-3 w-3" />
+                        <span>{test.temperature.toFixed(1)}°C</span>
+                      </div>
+                      {test.weatherCondition && (
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Cloud className="h-3 w-3" />
+                          <span className="capitalize">{test.weatherCondition}</span>
+                        </div>
+                      )}
+                      {test.humidity !== undefined && (
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Droplets className="h-3 w-3" />
+                          <span>{test.humidity}% humidity</span>
+                        </div>
+                      )}
+                      {test.windSpeed !== undefined && (
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Wind className="h-3 w-3" />
+                          <span>{test.windSpeed.toFixed(1)} m/s</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">No weather data</span>
+                  )}
                 </TableCell>
                 <TableCell className="py-4 text-center">
                   {test.contaminants.length > 0 ? (
@@ -372,7 +403,7 @@ export function WaterTestDashboard() {
           <DialogHeader>
             <DialogTitle>Log New Water Quality Test</DialogTitle>
             <DialogDescription>
-              Enter the water quality test details below.
+              Enter the water quality test details below. Weather data will be automatically captured for scientific correlation.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -480,7 +511,7 @@ export function WaterTestDashboard() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingTestId} onOpenChange={(open) => !open && closeEditDialog()}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Edit Water Quality Test</DialogTitle>
             <DialogDescription>
@@ -488,6 +519,44 @@ export function WaterTestDashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {editingTestId && (() => {
+              const test = tests.find(t => t._id === editingTestId)
+              return test && test.temperature !== undefined ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <Cloud className="h-4 w-4" />
+                    Weather Conditions at Time of Test
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Thermometer className="h-3 w-3 text-blue-600" />
+                      <span className="text-blue-800">{test.temperature.toFixed(1)}°C</span>
+                    </div>
+                    {test.weatherCondition && (
+                      <div className="flex items-center gap-2">
+                        <Cloud className="h-3 w-3 text-blue-600" />
+                        <span className="text-blue-800 capitalize">{test.weatherCondition}</span>
+                      </div>
+                    )}
+                    {test.humidity !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <Droplets className="h-3 w-3 text-blue-600" />
+                        <span className="text-blue-800">{test.humidity}% humidity</span>
+                      </div>
+                    )}
+                    {test.windSpeed !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <Wind className="h-3 w-3 text-blue-600" />
+                        <span className="text-blue-800">{test.windSpeed.toFixed(1)} m/s wind</span>
+                      </div>
+                    )}
+                  </div>
+                  {test.weatherDescription && (
+                    <p className="text-xs text-blue-700 mt-2 italic">{test.weatherDescription}</p>
+                  )}
+                </div>
+              ) : null
+            })()}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="editPH">pH Level *</Label>

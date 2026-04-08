@@ -50,7 +50,7 @@ const mainMenu = [
   { name: "Inventory Transactions", href: "/inventory-transactions", icon: Package },
   { name: "Water Source", href: "/water-sources", icon: Droplets },
   { name: "Water Quality", href: "/water-tests", icon: ShieldCheck },
-  { name: "Weather", href: "/weather", icon: CloudSun },
+  
 ];
 
 const preferences = [

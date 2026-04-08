@@ -6,14 +6,14 @@ import {
   updateWaterSourceController,
   deleteWaterSourceController
 } from '../controllers/waterSource.controller.js';
-import auth from '../middleware/auth.js';
+import auth, { requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.get('/', auth, getAllWaterSourcesController);
 router.get('/:id', auth, getWaterSourceByIdController);
-router.post('/', auth, createWaterSourceController);
-router.put('/:id', auth, updateWaterSourceController);
-router.delete('/:id', auth, deleteWaterSourceController);
+router.post('/', auth, requireRole('admin'), createWaterSourceController);
+router.put('/:id', auth, requireRole('admin'), updateWaterSourceController);
+router.delete('/:id', auth, requireRole('admin'), deleteWaterSourceController);
 
 export default router;

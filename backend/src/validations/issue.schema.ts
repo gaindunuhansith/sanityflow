@@ -9,8 +9,13 @@ export const createIssueSchema = z.object({
   priority: z.enum(['Low', 'Medium', 'High']).optional()
 });
 
-// Schema for updating an issue (status, assignment, resolution notes)
+// Schema for updating an issue (all fields admin can modify)
 export const updateIssueSchema = z.object({
+  issueType: z.enum(['Water Quality', 'Water Shortage', 'Infrastructure', 'Other']).optional(),
+  description: z.string().min(1, 'Description cannot be empty').optional(),
+  location: z.string().min(1, 'Location cannot be empty').optional(),
+  photo: z.string().optional(),
+  priority: z.enum(['Low', 'Medium', 'High']).optional(),
   status: z.enum(['Pending', 'In Progress', 'Resolved']).optional(),
   assignedTo: z.string().optional(),
   resolutionNotes: z.string().optional()

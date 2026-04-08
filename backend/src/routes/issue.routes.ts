@@ -12,8 +12,8 @@ const router = express.Router();
 
 router.get('/', auth, getIssuesController);
 router.get('/:id', auth, getIssueByIdController);
-router.post('/', auth, createIssueController);
-router.put('/:id', auth, updateIssueController);
-router.delete('/:id', auth, deleteIssueController);
+router.post('/', auth, requireRole('admin'), createIssueController);
+router.put('/:id', auth, requireRole('admin'), updateIssueController);
+router.delete('/:id', auth, requireRole('admin'), deleteIssueController);
 
 export default router;

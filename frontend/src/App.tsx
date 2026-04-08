@@ -5,17 +5,12 @@ import { LoginPage } from "./features/auth/Login";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ForumDashboard } from "./components/forum/ForumDashboard";
 import { IssueDashboard } from "./components/Issues/IssueDashboard";
-import { ReportIssueForm } from "./components/Issues/ReportIssueForm";
-import { UpdateIssueForm } from "./components/Issues/UpdateIssueForm";
 import { WaterSourceDashboard } from "./components/water-sources/WaterSourceDashboard";
-import { CreateWaterSourceForm, UpdateWaterSourceForm } from "./components/water-sources/WaterSourceForms";
 import { WaterTestDashboard } from "./components/water-tests/WaterTestDashboard";
-import { CreateWaterTestForm, UpdateWaterTestForm } from "./components/water-tests/WaterTestForms";
 import { DistributionDashboard } from "./components/distribution/DistributionDashboard";
 import { BlogDashboard } from "./components/blog/BlogDashboard";
 import { DriverDashboard } from "./components/drivers/DriverDashboard";
 import { BeneficiaryDashboard } from "./components/beneficiaries/BeneficiaryDashboard";
-import { WeatherDashboard } from "./components/weather/WeatherDashboard";
 import { ResourceDashboard } from "./components/inventory/ResourceDashboard";
 import { SupplierDashboard } from "./components/inventory/SupplierDashboard";
 import { InventoryTransactionDashboard } from "./components/inventory/InventoryTransactionDashboard";
@@ -89,14 +84,6 @@ const router = createBrowserRouter([
             element: <IssueDashboard />
           },
           {
-            path: "issues/new",
-            element: <ReportIssueForm />
-          },
-          {
-            path: "issues/edit/:id",
-            element: <UpdateIssueForm />
-          },
-          {
             path: "drivers",
             element: <DriverDashboard />
           },
@@ -109,28 +96,8 @@ const router = createBrowserRouter([
             element: <WaterSourceDashboard />
           },
           {
-            path: "water-sources/new",
-            element: <CreateWaterSourceForm />
-          },
-          {
-            path: "water-sources/edit/:id",
-            element: <UpdateWaterSourceForm />
-          },
-          {
             path: "water-tests",
             element: <WaterTestDashboard />
-          },
-          {
-            path: "water-tests/new",
-            element: <CreateWaterTestForm />
-          },
-          {
-            path: "water-tests/edit/:id",
-            element: <UpdateWaterTestForm />
-          },
-          {
-            path: "weather",
-            element: <WeatherDashboard />
           },
           {
             path: "resources",

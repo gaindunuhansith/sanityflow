@@ -24,6 +24,13 @@ export interface WaterTest {
         email: string;
       };
   notes?: string;
+  // Weather data for scientific correlation
+  temperature?: number;
+  humidity?: number;
+  pressure?: number;
+  windSpeed?: number;
+  weatherCondition?: string;
+  weatherDescription?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +50,12 @@ export type UpdateWaterTestData = Partial<{
   turbidity: number;
   contaminants: string[];
   notes?: string;
+  temperature?: number;
+  humidity?: number;
+  pressure?: number;
+  windSpeed?: number;
+  weatherCondition?: string;
+  weatherDescription?: string;
 }>;
 
 export type WaterTestFilters = {
@@ -108,7 +121,12 @@ export const waterTestApi = createApi({
         avgPH: number;
         avgTDS: number;
         avgTurbidity: number;
+        avgTemperature?: number;
+        avgHumidity?: number;
+        avgPressure?: number;
+        avgWindSpeed?: number;
         totalTests: number;
+        testsWithWeatherData: number;
         unsafeCount: number;
         safeCount: number;
       }>,

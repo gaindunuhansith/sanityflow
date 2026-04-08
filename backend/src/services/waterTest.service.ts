@@ -5,6 +5,7 @@ import WaterSource from '../models/WaterSource.js';
 import type { CreateWaterTestData, UpdateWaterTestData, WaterTestFilters } from '../validations/waterTest.schemas.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/errorHandler.js';
+import { fetchWeatherForLocation } from './weather.service.js';
 
 const classifyWaterSafety = (pH: number, tds: number, turbidity: number, contaminants: string[]): 'Safe' | 'Unsafe' => {
   if (pH < 6.5 || pH > 8.5 || tds > 500 || turbidity > 4 || contaminants.length > 0) {
@@ -17,19 +18,45 @@ export const createWaterTestService = async (
   data: CreateWaterTestData,
   userId: string
 ): Promise<IWaterQualityTest> => {
-  const sourceExists = await WaterSource.exists({ _id: data.waterSource });
-  if (!sourceExists) {
+  const source = await WaterSource.findById(data.waterSource);
+  if (!source) {
     throw new AppError(404, 'Water source not found');
   }
 
   const status = classifyWaterSafety(data.pH, data.tds, data.turbidity, data.contaminants);
 
-  const test = new WaterQualityTest({
-    ...data,
-    status,
-    tester: userId
-  });
+  // Fetch weather data for the water source location
+  let weatherData = null;
+  try {
+    weatherData = await fetchWeatherForLocation(source.location);
+  } catch (error) {
+    logger.warn(`Failed to fetch weather data for location "${source.location}": ${(error as Error).message}`);
+  }
 
+  const testData: Partial<IWaterQualityTest> = {
+    waterSource: new mongoose.Types.ObjectId(data.waterSource),
+    pH: data.pH,
+    tds: data.tds,
+    turbidity: data.turbidity,
+    contaminants: data.contaminants,
+    status,
+    tester: new mongoose.Types.ObjectId(userId),
+    ...(data.notes && { notes: data.notes })
+  };
+
+  // Include weather data if available
+  if (weatherData) {
+    testData.temperature = weatherData.temp_c;
+    testData.humidity = weatherData.humidity;
+    testData.pressure = weatherData.pressure;
+    testData.windSpeed = weatherData.windSpeed;
+    testData.weatherCondition = weatherData.condition;
+    testData.weatherDescription = weatherData.description;
+
+    logger.info(`Weather data captured for water test: ${weatherData.condition}, ${weatherData.temp_c}°C, ${weatherData.humidity}% humidity`);
+  }
+
+  const test = new WaterQualityTest(testData);
   const saved = await test.save();
 
   if (status === 'Unsafe') {

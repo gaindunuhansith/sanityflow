@@ -29,6 +29,9 @@ describe('weather.controller', () => {
       condition: 'Clear',
       temp_c: 20,
       humidity: 60,
+      pressure: 1013,
+      windSpeed: 5.2,
+      description: 'clear sky',
       rainfall_last_1h_mm: 0,
       isHighRisk: false,
     };

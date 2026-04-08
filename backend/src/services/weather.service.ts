@@ -7,6 +7,9 @@ export interface WeatherData {
   temp_c: number;
   humidity: number;
   rainfall_last_1h_mm: number;
+  pressure: number;
+  windSpeed: number;
+  description: string;
   isHighRisk: boolean;
   riskReason?: string;
 }
@@ -21,6 +24,9 @@ export const fetchWeatherForLocation = async (location: string): Promise<Weather
     const condition: string = data.weather?.[0]?.main ?? 'Unknown';
     const temp_c: number = data.main?.temp ?? 0;
     const humidity: number = data.main?.humidity ?? 0;
+    const pressure: number = data.main?.pressure ?? 0;
+    const windSpeed: number = data.wind?.speed ?? 0;
+    const description: string = data.weather?.[0]?.description ?? 'Unknown';
     const rainfall_last_1h_mm: number = data.rain?.['1h'] ?? 0;
 
     const hasHeavyRainfall = rainfall_last_1h_mm > 10;
@@ -38,7 +44,7 @@ export const fetchWeatherForLocation = async (location: string): Promise<Weather
       logger.warn(`Weather risk at "${location}": ${riskReason}`);
     }
 
-    return { condition, temp_c, humidity, rainfall_last_1h_mm, isHighRisk, ...(riskReason && { riskReason }) };
+    return { condition, temp_c, humidity, pressure, windSpeed, description, rainfall_last_1h_mm, isHighRisk, ...(riskReason && { riskReason }) };
   } catch (error) {
     logger.warn(`Weather fetch failed for location "${location}": ${(error as Error).message}`);
     return null;

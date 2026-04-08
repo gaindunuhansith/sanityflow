@@ -10,7 +10,6 @@ import {
   Truck,
   Package,
   Droplets,
-  CloudSun,
   Settings,
   AlertTriangle,
   ShieldCheck,

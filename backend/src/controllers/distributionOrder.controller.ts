@@ -19,18 +19,26 @@ export const createDistributionOrder = async (req: Request, res: Response, next:
 export const getAllDistributionOrders = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { status, driver, beneficiary, search, page, limit } = req.query;
-    const driverFilter = req.user.role === 'driver'
-      ? req.user.userId
-      : (driver ? String(driver) : undefined);
+    const isDriver = req.user.role === 'driver';
 
-    const orders = await distributionOrderService.getAllDistributionOrders({
-      ...(status ? { status: String(status) } : {}),
-      ...(driverFilter ? { driver: driverFilter } : {}),
-      ...(beneficiary ? { beneficiary: String(beneficiary) } : {}),
-      ...(search ? { search: String(search) } : {}),
-      ...(page ? { page: Number(page) } : {}),
-      ...(limit ? { limit: Number(limit) } : {}),
-    });
+    const filters: {
+      status?: string;
+      driver?: string;
+      beneficiary?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+    } = {};
+
+    if (status) filters.status = String(status);
+    if (isDriver) filters.driver = req.user.userId;
+    else if (driver) filters.driver = String(driver);
+    if (beneficiary) filters.beneficiary = String(beneficiary);
+    if (search) filters.search = String(search);
+    if (page) filters.page = Number(page);
+    if (limit) filters.limit = Number(limit);
+
+    const orders = await distributionOrderService.getAllDistributionOrders(filters);
     res.json(orders);
   } catch (error) {
     next(error);

@@ -69,7 +69,8 @@ const router = createBrowserRouter([
           },
           {
             path: "blog",
-            element: <BlogDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <BlogDashboard /> }]
           },
           {
             path: "distributions",
@@ -77,39 +78,48 @@ const router = createBrowserRouter([
           },
           {
             path: "forum",
-            element: <ForumDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <ForumDashboard /> }]
           },
           {
             path: "issues",
-            element: <IssueDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <IssueDashboard /> }]
           },
           {
             path: "drivers",
-            element: <DriverDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <DriverDashboard /> }]
           },
           {
             path: "beneficiaries",
-            element: <BeneficiaryDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <BeneficiaryDashboard /> }]
           },
           {
             path: "water-sources",
-            element: <WaterSourceDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <WaterSourceDashboard /> }]
           },
           {
             path: "water-tests",
-            element: <WaterTestDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <WaterTestDashboard /> }]
           },
           {
             path: "resources",
-            element: <ResourceDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <ResourceDashboard /> }]
           },
           {
             path: "suppliers",
-            element: <SupplierDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <SupplierDashboard /> }]
           },
           {
             path: "inventory-transactions",
-            element: <InventoryTransactionDashboard />
+            element: <ProtectedRoute allowedRoles={['admin', 'member']} />,
+            children: [{ index: true, element: <InventoryTransactionDashboard /> }]
           },
           {
             path: "settings",

@@ -16,8 +16,10 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
+const savedUser = localStorage.getItem('user');
+
 const initialState: AuthState = {
-  user: null, // Ideally we would load from local storage if we persist user, but token is enough
+  user: savedUser ? (JSON.parse(savedUser) as User) : null,
   token: localStorage.getItem('authToken'),
   isAuthenticated: !!localStorage.getItem('authToken'),
 };

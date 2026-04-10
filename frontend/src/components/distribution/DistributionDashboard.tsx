@@ -148,6 +148,8 @@ const getApiErrorMessage = (error: unknown) => {
 
 export function DistributionDashboard() {
   const dispatch = useDispatch<AppDispatch>()
+  const currentUser = useSelector((state: RootState) => state.auth.user)
+  const isDriver = currentUser?.role === 'driver'
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [createResourceId, setCreateResourceId] = useState("")
@@ -180,7 +182,7 @@ export function DistributionDashboard() {
   const queryParams = useMemo(() => {
     return {
       ...(statusFilter !== "all" ? { status: statusFilter } : {}),
-      ...(driverFilter !== "all" ? { driver: driverFilter } : {}),
+      ...(isDriver ? { driver: currentUser?.id } : driverFilter !== "all" ? { driver: driverFilter } : {}),
       ...(beneficiaryFilter !== "all" ? { beneficiary: beneficiaryFilter } : {}),
       ...(searchText.trim().length > 0 ? { search: searchText.trim() } : {}),
       page: currentPage,
@@ -526,6 +528,7 @@ export function DistributionDashboard() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Distribution Orders</h1>
         <div className="flex items-center gap-3">
+          {!isDriver && (
           <Button
             className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium"
             onClick={() => dispatch(setCreateDialogOpen(true))}
@@ -533,6 +536,7 @@ export function DistributionDashboard() {
             <Plus className="mr-2 h-4 w-4" />
             New Order
           </Button>
+        )}
           <Select defaultValue="this-month">
             <SelectTrigger className="w-32.5 rounded-xl h-10 border-gray-200 bg-white">
               <SelectValue placeholder="Period" />
@@ -839,25 +843,27 @@ export function DistributionDashboard() {
             </SelectContent>
           </Select>
 
-          <Select
-            value={driverFilter}
-            onValueChange={(value) => {
-              dispatch(setDriverFilter(value))
-              setCurrentPage(1)
-            }}
-          >
-            <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
-              <SelectValue placeholder="All Drivers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Drivers</SelectItem>
-              {availableDrivers.map((driver) => (
-                <SelectItem key={driver.value} value={driver.value}>
-                  {driver.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isDriver && (
+            <Select
+              value={driverFilter}
+              onValueChange={(value) => {
+                dispatch(setDriverFilter(value))
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
+                <SelectValue placeholder="All Drivers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Drivers</SelectItem>
+                {availableDrivers.map((driver) => (
+                  <SelectItem key={driver.value} value={driver.value}>
+                    {driver.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Select
             value={beneficiaryFilter}
@@ -1001,24 +1007,28 @@ export function DistributionDashboard() {
                     <TableCell className="text-sm font-medium text-gray-600 py-4">{getDriverName(order)}</TableCell>
                     <TableCell className="text-right pr-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
-                          title="Assign Driver"
-                          onClick={() => openAssignDialog(order)}
-                        >
-                          <UserPlus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
-                          title="Update Beneficiaries"
-                          onClick={() => openBeneficiariesDialog(order)}
-                        >
-                          <Users className="h-4 w-4" />
-                        </Button>
+                        {!isDriver && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
+                              title="Assign Driver"
+                              onClick={() => openAssignDialog(order)}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+                              title="Update Beneficiaries"
+                              onClick={() => openBeneficiariesDialog(order)}
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1028,15 +1038,17 @@ export function DistributionDashboard() {
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          title="Delete Order"
-                          onClick={() => openDeleteDialog(order)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!isDriver && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            title="Delete Order"
+                            onClick={() => openDeleteDialog(order)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

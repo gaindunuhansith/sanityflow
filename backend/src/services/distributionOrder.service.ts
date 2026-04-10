@@ -78,7 +78,7 @@ export const getAllDistributionOrders = async (filters?: {
   const query: any = {};
   
   if (filters?.status) query.status = filters.status;
-  if (filters?.driver) query.driver = filters.driver;
+  if (filters?.driver !== undefined) query.driver = filters.driver;
   if (filters?.beneficiary) query.beneficiaries = filters.beneficiary;
 
   if (filters?.search) {

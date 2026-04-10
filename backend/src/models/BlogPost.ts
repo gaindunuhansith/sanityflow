@@ -3,6 +3,7 @@ import type { Document } from 'mongoose';
 
 export interface IBlogPost extends Document {
   title: string;
+  slug: string;
   summary?: string;
   content: string;
   coverImage?: string;
@@ -14,6 +15,7 @@ export interface IBlogPost extends Document {
 const blogPostSchema = new mongoose.Schema<IBlogPost>(
   {
     title: { type: String, required: true, maxlength: 200 },
+    slug: { type: String, required: true, unique: true, maxlength: 240 },
     summary: { type: String, maxlength: 500 },
     content: { type: String, required: true },
     coverImage: { type: String },
@@ -26,5 +28,6 @@ const blogPostSchema = new mongoose.Schema<IBlogPost>(
 
 blogPostSchema.index({ status: 1, publishedAt: -1 });
 blogPostSchema.index({ tags: 1 });
+blogPostSchema.index({ slug: 1 }, { unique: true });
 
 export default mongoose.model<IBlogPost>('BlogPost', blogPostSchema);

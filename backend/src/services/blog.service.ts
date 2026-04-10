@@ -3,6 +3,7 @@ import type { IBlogPost } from '../models/BlogPost.js';
 import type { CreateBlogPostData, UpdateBlogPostData, GetBlogPostsQuery } from '../validations/blog.schemas.js';
 import { AppError } from '../utils/errorHandler.js';
 import { HTTP_STATUS } from '../constants/index.js';
+import mongoose from 'mongoose';
 
 export interface PaginatedBlogPosts {
   posts: IBlogPost[];
@@ -11,6 +12,31 @@ export interface PaginatedBlogPosts {
   limit: number;
   totalPages: number;
 }
+
+const toSlug = (value: string): string => {
+  return value
+    .toLowerCase()
+    .trim()
+    .replaceAll(/[^a-z0-9\s-]/g, '')
+    .replaceAll(/\s+/g, '-')
+    .replaceAll(/-+/g, '-')
+    .replaceAll(/^-|-$/g, '');
+};
+
+const buildUniqueSlug = async (title: string, excludeId?: string): Promise<string> => {
+  const base = toSlug(title) || `post-${Date.now()}`;
+  const idFilter = excludeId ? { _id: { $ne: new mongoose.Types.ObjectId(excludeId) } } : {};
+
+  let candidate = base;
+  let suffix = 1;
+
+  while (await BlogPost.exists({ slug: candidate, ...idFilter })) {
+    suffix += 1;
+    candidate = `${base}-${suffix}`;
+  }
+
+  return candidate;
+};
 
 export const getAllBlogPostsService = async (query: GetBlogPostsQuery): Promise<PaginatedBlogPosts> => {
   const { page, limit, status, tag, search } = query;
@@ -61,7 +87,8 @@ export const getBlogPostByIdService = async (id: string): Promise<IBlogPost> => 
 };
 
 export const createBlogPostService = async (data: CreateBlogPostData): Promise<IBlogPost> => {
-  const post = new BlogPost(data);
+  const slug = await buildUniqueSlug(data.title);
+  const post = new BlogPost({ ...data, slug });
   if (data.status === 'Published' && !post.publishedAt) {
     post.publishedAt = new Date();
   }
@@ -70,6 +97,10 @@ export const createBlogPostService = async (data: CreateBlogPostData): Promise<I
 
 export const updateBlogPostService = async (id: string, data: UpdateBlogPostData): Promise<IBlogPost> => {
   const updatePayload: Record<string, unknown> = { ...data };
+
+  if (typeof data.title === 'string' && data.title.trim().length > 0) {
+    updatePayload.slug = await buildUniqueSlug(data.title, id);
+  }
 
   if (data.status === 'Published') {
     updatePayload.publishedAt = new Date();

@@ -37,19 +37,18 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainMenu = [
-  { name: "Dashboard", href: "/", icon: Home },
-  { name: "Blog", href: "/blog", icon: Feather },
-  { name: "Forum", href: "/forum", icon: MessageSquare },
-  { name: "Issues", href: "/issues", icon: AlertTriangle },
-  { name: "Beneficiary", href: "/beneficiaries", icon: Users },
-  { name: "Drivers", href: "/drivers", icon: Users },
-  { name: "Distribution", href: "/distributions", icon: Truck },
-  { name: "Resources", href: "/resources", icon: Boxes },
-  { name: "Supplier", href: "/suppliers", icon: Store },
-  { name: "Inventory Transactions", href: "/inventory-transactions", icon: Package },
-  { name: "Water Source", href: "/water-sources", icon: Droplets },
-  { name: "Water Quality", href: "/water-tests", icon: ShieldCheck },
-  
+  { name: "Dashboard", href: "/", icon: Home, roles: ['admin', 'member', 'driver'] },
+  { name: "Blog", href: "/blog", icon: Feather, roles: ['admin', 'member'] },
+  { name: "Forum", href: "/forum", icon: MessageSquare, roles: ['admin', 'member'] },
+  { name: "Issues", href: "/issues", icon: AlertTriangle, roles: ['admin', 'member'] },
+  { name: "Beneficiary", href: "/beneficiaries", icon: Users, roles: ['admin', 'member'] },
+  { name: "Drivers", href: "/drivers", icon: Users, roles: ['admin', 'member'] },
+  { name: "Distribution", href: "/distributions", icon: Truck, roles: ['admin', 'member', 'driver'] },
+  { name: "Resources", href: "/resources", icon: Boxes, roles: ['admin', 'member'] },
+  { name: "Supplier", href: "/suppliers", icon: Store, roles: ['admin', 'member'] },
+  { name: "Inventory Transactions", href: "/inventory-transactions", icon: Package, roles: ['admin', 'member'] },
+  { name: "Water Source", href: "/water-sources", icon: Droplets, roles: ['admin', 'member'] },
+  { name: "Water Quality", href: "/water-tests", icon: ShieldCheck, roles: ['admin', 'member'] },
 ];
 
 const preferences = [
@@ -114,7 +113,7 @@ export function Sidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainMenu.map((item) => {
+              {mainMenu.filter((item) => item.roles.includes(authUser?.role ?? 'member')).map((item) => {
                 const isActive = location.pathname === item.href || (location.pathname.startsWith(item.href) && item.href !== '/');
                 return (
                   <SidebarMenuItem key={item.name}>

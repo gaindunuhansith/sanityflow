@@ -5,6 +5,7 @@ import Beneficiary from '../models/Beneficiary.js';
 import mongoose from 'mongoose';
 import { AppError } from '../utils/errorHandler.js';
 import { sendOrderAssignedEmail, sendStatusUpdateEmail } from './email.service.js';
+import type { JWTPayload } from '../types/index.js';
 
 const validateBeneficiaries = async (beneficiaries?: string[]) => {
   if (!beneficiaries || beneficiaries.length === 0) {
@@ -116,12 +117,17 @@ export const getAllDistributionOrders = async (filters?: {
   };
 };
 
-export const getDistributionOrderById = async (id: string) => {
+export const getDistributionOrderById = async (id: string, requester?: JWTPayload) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError(400, 'Invalid order ID');
   }
+
+  const query: { _id: string; driver?: string } = { _id: id };
+  if (requester?.role === 'driver') {
+    query.driver = requester.userId;
+  }
   
-  const order = await DistributionOrder.findById(id)
+  const order = await DistributionOrder.findOne(query)
     .populate('resource', 'name unit category')
     .populate('driver', 'name email')
     .populate('createdBy', 'name email')
@@ -195,13 +201,13 @@ export const updateDistributionOrder = async (
   return order;
 };
 
-export const updateDeliveryStatus = async (id: string, status: string) => {
+export const updateDeliveryStatus = async (id: string, status: string, driverUserId: string) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError(400, 'Invalid order ID');
   }
   
-  const order = await DistributionOrder.findByIdAndUpdate(
-    id,
+  const order = await DistributionOrder.findOneAndUpdate(
+    { _id: id, driver: driverUserId },
     { status },
     { new: true, runValidators: true }
   ).populate('resource', 'name unit category')
@@ -210,7 +216,7 @@ export const updateDeliveryStatus = async (id: string, status: string) => {
    .populate('beneficiaries', 'name location eligibilityStatus');
   
   if (!order) {
-    throw new AppError(404, 'Distribution order not found');
+    throw new AppError(404, 'Distribution order not found for this driver');
   }
 
   // Email the admin (order creator) on every status change

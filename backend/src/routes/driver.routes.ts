@@ -1,4 +1,5 @@
 import express from 'express';
+import auth, { requireRole } from '../middleware/auth.js';
 import {
   createDriverController,
   getAllDriversController,
@@ -9,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', createDriverController);
-router.get('/', getAllDriversController);
-router.get('/:id', getDriverByIdController);
-router.put('/:id', updateDriverController);
-router.delete('/:id', deleteDriverController);
+router.post('/', auth, requireRole('admin'), createDriverController);
+router.get('/', auth, requireRole('admin'), getAllDriversController);
+router.get('/:id', auth, requireRole('admin'), getDriverByIdController);
+router.put('/:id', auth, requireRole('admin'), updateDriverController);
+router.delete('/:id', auth, requireRole('admin'), deleteDriverController);
 
 export default router;

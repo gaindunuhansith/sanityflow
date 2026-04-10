@@ -1,4 +1,5 @@
 import express from 'express';
+import auth, { requireRole } from '../middleware/auth.js';
 import {
   createBeneficiaryController,
   getAllBeneficiariesController,
@@ -9,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', createBeneficiaryController);
-router.get('/', getAllBeneficiariesController);
-router.get('/:id', getBeneficiaryByIdController);
-router.put('/:id', updateBeneficiaryController);
-router.delete('/:id', deleteBeneficiaryController);
+router.post('/', auth, requireRole('admin'), createBeneficiaryController);
+router.get('/', auth, requireRole('admin'), getAllBeneficiariesController);
+router.get('/:id', auth, requireRole('admin'), getBeneficiaryByIdController);
+router.put('/:id', auth, requireRole('admin'), updateBeneficiaryController);
+router.delete('/:id', auth, requireRole('admin'), deleteBeneficiaryController);
 
 export default router;

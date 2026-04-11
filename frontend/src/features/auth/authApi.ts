@@ -13,6 +13,7 @@ export const authApi = createApi({
       return headers;
     },
   }),
+  tagTypes: ['Profile'],
   endpoints: (builder) => ({
     login: builder.mutation({
       query: (credentials) => ({
@@ -29,9 +30,25 @@ export const authApi = createApi({
       }),
     }),
     getMe: builder.query({
-      query: () => '/auth/me', // If you have a 'me' route, else we can skip
+      query: () => '/profile/me',
+      providesTags: ['Profile'],
+    }),
+    updateMe: builder.mutation({
+      query: (body) => ({
+        url: '/profile/me',
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Profile'],
+    }),
+    createAdmin: builder.mutation({
+      query: (body) => ({
+        url: '/auth/create-admin',
+        method: 'POST',
+        body,
+      }),
     }),
   }),
 });
 
-export const { useLoginMutation, useRegisterMutation, useGetMeQuery } = authApi;
+export const { useLoginMutation, useRegisterMutation, useGetMeQuery, useUpdateMeMutation, useCreateAdminMutation } = authApi;

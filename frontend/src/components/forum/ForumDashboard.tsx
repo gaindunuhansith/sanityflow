@@ -1,8 +1,10 @@
-import React, { useMemo } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, Pencil, Trash2, ChevronsUpDown, MessageSquareReply } from "lucide-react"
+import React, { useMemo, useState } from "react"
+import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, Pencil, Trash2, ChevronsUpDown, MessageSquareReply, Plus } from "lucide-react"
 import {
   selectForumState,
   clearReplyDraft,
+  setCreateThreadModalOpen,
+  setEditingThreadId,
   setPeriodFilter,
   setSearchQuery,
   setStatusFilter,
@@ -13,13 +15,19 @@ import {
 import {
   type ForumThread,
   useCreateForumReplyMutation,
+  useCreateForumThreadMutation,
+  useDeleteForumThreadMutation,
   useGetForumRepliesQuery,
   useGetForumThreadsQuery,
+  useUpdateForumThreadMutation,
+  type ForumThreadStatus,
 } from "@/features/forum/forumApi"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -35,11 +43,60 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return "Request failed. Please try again."
+  }
+
+  const maybeError = error as { data?: unknown }
+  const data = maybeError.data
+
+  if (data && typeof data === "object") {
+    const maybeMessage = data as { message?: unknown; error?: unknown }
+    if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
+      return maybeMessage.message
+    }
+
+    if (typeof maybeMessage.error === "string" && maybeMessage.error.trim().length > 0) {
+      return maybeMessage.error
+    }
+  }
+
+  return "Request failed. Please try again."
+}
 
 export function ForumDashboard() {
   const dispatch = useAppDispatch()
-  const { expandedThreadIds, searchQuery, tagFilter, statusFilter, periodFilter, replyDraftByThreadId } = useAppSelector(selectForumState)
+  const {
+    expandedThreadIds,
+    searchQuery,
+    tagFilter,
+    statusFilter,
+    periodFilter,
+    replyDraftByThreadId,
+    isCreateThreadModalOpen,
+    editingThreadId,
+  } = useAppSelector(selectForumState)
   const [createReply, { isLoading: isReplySubmitting }] = useCreateForumReplyMutation()
+  const [createThread, { isLoading: isCreatingThread }] = useCreateForumThreadMutation()
+  const [updateThread, { isLoading: isUpdatingThread }] = useUpdateForumThreadMutation()
+  const [deleteThread] = useDeleteForumThreadMutation()
+
+  const [threadForm, setThreadForm] = useState({
+    title: "",
+    content: "",
+    tags: "",
+    status: "Open" as ForumThreadStatus,
+  })
+  const [threadFormError, setThreadFormError] = useState("")
 
   const threadQueryParams = useMemo(() => {
     const hasSearch = searchQuery.trim().length > 0
@@ -79,6 +136,96 @@ export function ForumDashboard() {
     dispatch(toggleExpandThread(id))
   }
 
+  const closeThreadModal = () => {
+    dispatch(setCreateThreadModalOpen(false))
+    dispatch(setEditingThreadId(null))
+    setThreadFormError("")
+  }
+
+  const openCreateThread = () => {
+    setThreadForm({
+      title: "",
+      content: "",
+      tags: "",
+      status: "Open",
+    })
+    setThreadFormError("")
+    dispatch(setEditingThreadId(null))
+    dispatch(setCreateThreadModalOpen(true))
+  }
+
+  const openEditThread = (threadId: string) => {
+    const targetThread = threads.find((thread) => thread._id === threadId)
+    if (!targetThread) {
+      return
+    }
+
+    setThreadForm({
+      title: targetThread.title,
+      content: targetThread.content,
+      tags: targetThread.tags.join(", "),
+      status: targetThread.status,
+    })
+    dispatch(setEditingThreadId(threadId))
+    dispatch(setCreateThreadModalOpen(false))
+    setThreadFormError("")
+  }
+
+  const saveThread = async () => {
+    const title = threadForm.title.trim()
+    const content = threadForm.content.trim()
+    const tags = threadForm.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+
+    if (!title || !content) {
+      setThreadFormError("Title and content are required.")
+      return
+    }
+
+    setThreadFormError("")
+
+    try {
+      if (editingThreadId) {
+        await updateThread({
+          id: editingThreadId,
+          data: {
+            title,
+            content,
+            tags,
+            status: threadForm.status,
+          },
+        }).unwrap()
+      } else {
+        await createThread({
+          title,
+          content,
+          tags,
+          status: threadForm.status,
+        }).unwrap()
+      }
+
+      closeThreadModal()
+      await refetchThreads()
+    } catch (error) {
+      setThreadFormError(getApiErrorMessage(error))
+    }
+  }
+
+  const handleDeleteThread = async (threadId: string) => {
+    if (!confirm("Are you sure you want to delete this thread?")) {
+      return
+    }
+
+    try {
+      await deleteThread(threadId).unwrap()
+      await refetchThreads()
+    } catch (error) {
+      console.error("Unable to delete thread", error)
+    }
+  }
+
   const submitReply = async (threadId: string) => {
     const content = replyDraftByThreadId[threadId]?.trim()
     if (!content) {
@@ -97,7 +244,16 @@ export function ForumDashboard() {
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Recent Threads</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-gray-900">Recent Threads</h1>
+          <Button
+            className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium"
+            onClick={openCreateThread}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Thread
+          </Button>
+        </div>
         <div className="flex items-center gap-3">
           <Select value={periodFilter} onValueChange={(value) => dispatch(setPeriodFilter(value as "this-month" | "last-month" | "this-year"))}>
             <SelectTrigger className="w-32.5 rounded-xl h-10 border-gray-200 bg-white">
@@ -267,10 +423,20 @@ export function ForumDashboard() {
                     </TableCell>
                     <TableCell className="text-right pr-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
+                          onClick={() => openEditThread(thread._id)}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleDeleteThread(thread._id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -280,7 +446,7 @@ export function ForumDashboard() {
                   {/* Expanded Replies Section */}
                   {isExpanded && (
                     <TableRow className="bg-emerald-50/5 border-b border-gray-100 hover:bg-emerald-50/5">
-                      <TableCell colSpan={6} className="p-0">
+                      <TableCell colSpan={5} className="p-0">
                         <ThreadRepliesPanel
                           thread={thread}
                           draftValue={replyDraftByThreadId[thread._id] ?? ""}
@@ -307,6 +473,79 @@ export function ForumDashboard() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={isCreateThreadModalOpen || Boolean(editingThreadId)} onOpenChange={closeThreadModal}>
+        <DialogContent className="sm:max-w-[625px]">
+          <DialogHeader>
+            <DialogTitle>{editingThreadId ? "Edit Thread" : "Create Thread"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="thread-title">Title <span className="text-red-500">*</span></Label>
+              <Input
+                id="thread-title"
+                value={threadForm.title}
+                onChange={(event) => setThreadForm((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="Enter thread title"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="thread-content">Content <span className="text-red-500">*</span></Label>
+              <Textarea
+                id="thread-content"
+                rows={6}
+                value={threadForm.content}
+                onChange={(event) => setThreadForm((prev) => ({ ...prev, content: event.target.value }))}
+                placeholder="Write thread content"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="thread-tags">Tags (comma-separated)</Label>
+                <Input
+                  id="thread-tags"
+                  value={threadForm.tags}
+                  onChange={(event) => setThreadForm((prev) => ({ ...prev, tags: event.target.value }))}
+                  placeholder="e.g. alerts, training"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="thread-status">Status</Label>
+                <Select
+                  value={threadForm.status}
+                  onValueChange={(value) => setThreadForm((prev) => ({ ...prev, status: value as ForumThreadStatus }))}
+                >
+                  <SelectTrigger id="thread-status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Open">Open</SelectItem>
+                    <SelectItem value="Closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {threadFormError ? (
+              <p className="text-sm text-red-500">{threadFormError}</p>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeThreadModal}>Cancel</Button>
+            <Button
+              onClick={() => void saveThread()}
+              disabled={!threadForm.title.trim() || !threadForm.content.trim() || isCreatingThread || isUpdatingThread}
+            >
+              {editingThreadId ? "Save Changes" : "Create Thread"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

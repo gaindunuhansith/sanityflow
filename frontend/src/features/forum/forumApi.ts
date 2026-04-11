@@ -64,6 +64,18 @@ export interface CreateReplyPayload {
   content: string
 }
 
+export interface CreateThreadPayload {
+  title: string
+  content: string
+  tags: string[]
+  status: ForumThreadStatus
+}
+
+export interface UpdateThreadPayload {
+  id: string
+  data: Partial<CreateThreadPayload>
+}
+
 export const forumApi = createApi({
   reducerPath: "forumApi",
   baseQuery: axiosBaseQuery(),
@@ -110,6 +122,35 @@ export const forumApi = createApi({
         { type: "ForumThread", id: "LIST" },
       ],
     }),
+    createForumThread: builder.mutation<ForumThread, CreateThreadPayload>({
+      query: (data) => ({
+        url: "/community/forum",
+        method: "POST",
+        data,
+      }),
+      invalidatesTags: [{ type: "ForumThread", id: "LIST" }],
+    }),
+    updateForumThread: builder.mutation<ForumThread, UpdateThreadPayload>({
+      query: ({ id, data }) => ({
+        url: `/community/forum/${id}`,
+        method: "PATCH",
+        data,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "ForumThread", id },
+        { type: "ForumThread", id: "LIST" },
+      ],
+    }),
+    deleteForumThread: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/community/forum/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "ForumThread", id },
+        { type: "ForumThread", id: "LIST" },
+      ],
+    }),
   }),
 })
 
@@ -117,4 +158,7 @@ export const {
   useGetForumThreadsQuery,
   useGetForumRepliesQuery,
   useCreateForumReplyMutation,
+  useCreateForumThreadMutation,
+  useUpdateForumThreadMutation,
+  useDeleteForumThreadMutation,
 } = forumApi

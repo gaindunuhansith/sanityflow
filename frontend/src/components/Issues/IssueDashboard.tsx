@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Search, ChevronDown, Download, Pencil, Trash2, AlertTriangle, Hammer, Droplets, MapPin, Loader2, Plus } from "lucide-react"
+import { Search, ChevronDown, Pencil, Trash2, AlertTriangle, Hammer, Droplets, MapPin, Loader2, Plus } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -275,10 +275,6 @@ export function IssueDashboard() {
           >
             <Plus className="mr-2 h-4 w-4" />
             Report Issue
-          </Button>
-          <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
-            <Download className="mr-2 h-4 w-4" />
-            Export
           </Button>
         </div>
       </div>

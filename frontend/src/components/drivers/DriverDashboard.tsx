@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react"
-import { Search, SlidersHorizontal, Download, ChevronRight, ChevronsUpDown, Pencil, Trash2, Plus } from "lucide-react"
+import { Search, SlidersHorizontal, ChevronRight, ChevronsUpDown, Pencil, Trash2, Plus } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
 import { Input } from "@/components/ui/input"
@@ -537,12 +537,6 @@ export function DriverDashboard() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 xl:ml-auto w-full xl:w-auto justify-end">
-          <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium" disabled>
-            <Download className="mr-2 h-4 w-4" />
-            Download
-          </Button>
-        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">

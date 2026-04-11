@@ -9,6 +9,8 @@ interface ForumState {
   statusFilter: "all" | "Open" | "Closed"
   periodFilter: "this-month" | "last-month" | "this-year"
   replyDraftByThreadId: Record<string, string>
+  isCreateThreadModalOpen: boolean
+  editingThreadId: string | null
 }
 
 const initialState: ForumState = {
@@ -19,6 +21,8 @@ const initialState: ForumState = {
   statusFilter: "all",
   periodFilter: "this-month",
   replyDraftByThreadId: {},
+  isCreateThreadModalOpen: false,
+  editingThreadId: null,
 }
 
 const forumSlice = createSlice({
@@ -69,6 +73,12 @@ const forumSlice = createSlice({
       const { threadId } = action.payload
       state.replyDraftByThreadId[threadId] = ""
     },
+    setCreateThreadModalOpen: (state, action: PayloadAction<boolean>) => {
+      state.isCreateThreadModalOpen = action.payload
+    },
+    setEditingThreadId: (state, action: PayloadAction<string | null>) => {
+      state.editingThreadId = action.payload
+    },
   },
 })
 
@@ -81,6 +91,8 @@ export const {
   setPeriodFilter,
   updateReplyDraft,
   clearReplyDraft,
+  setCreateThreadModalOpen,
+  setEditingThreadId,
 } = forumSlice.actions
 
 export const forumReducer = forumSlice.reducer

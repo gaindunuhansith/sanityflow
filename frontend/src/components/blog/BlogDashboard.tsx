@@ -41,7 +41,7 @@ export function BlogDashboard() {
     () => ({
       page,
       limit,
-      ...(statusFilter !== "all" ? { status: statusFilter } : {}),
+      ...(statusFilter === "all" ? {} : { status: statusFilter }),
       ...(searchQuery.trim().length > 0 ? { search: searchQuery.trim() } : {}),
     }),
     [limit, page, searchQuery, statusFilter],
@@ -189,7 +189,7 @@ export function BlogDashboard() {
 
       {/* Edit / Create Dialog */}
       <Dialog open={isCreateModalOpen || !!editingPostId} onOpenChange={handleCloseModal}>
-        <DialogContent className="sm:max-w-[625px]">
+        <DialogContent className="sm:max-w-156.25">
           <DialogHeader>
             <DialogTitle>{editingPostId ? "Edit Blog Post" : "Add Blog Post"}</DialogTitle>
           </DialogHeader>

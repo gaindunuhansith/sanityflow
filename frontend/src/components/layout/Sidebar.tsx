@@ -1,16 +1,13 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  ChevronDown,
-  HelpCircle,
   Home,
   Feather,
   MessageSquare,
   Users,
   Truck,
   Package,
-  Droplets,
-  Settings,
+  Droplet,
   AlertTriangle,
   ShieldCheck,
   LogOut,
@@ -36,7 +33,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const mainMenu = [
+export const mainMenu = [
   { name: "Dashboard", href: "/", icon: Home, roles: ['admin', 'member', 'driver'] },
   { name: "Blog", href: "/blog", icon: Feather, roles: ['admin', 'member'] },
   { name: "Forum", href: "/forum", icon: MessageSquare, roles: ['admin', 'member'] },
@@ -47,13 +44,8 @@ const mainMenu = [
   { name: "Resources", href: "/resources", icon: Boxes, roles: ['admin', 'member'] },
   { name: "Supplier", href: "/suppliers", icon: Store, roles: ['admin', 'member'] },
   { name: "Inventory Transactions", href: "/inventory-transactions", icon: Package, roles: ['admin', 'member'] },
-  { name: "Water Source", href: "/water-sources", icon: Droplets, roles: ['admin', 'member'] },
+  { name: "Water Source", href: "/water-sources", icon: Droplet, roles: ['admin', 'member'] },
   { name: "Water Quality", href: "/water-tests", icon: ShieldCheck, roles: ['admin', 'member'] },
-];
-
-const preferences = [
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Help Center", href: "/help", icon: HelpCircle },
 ];
 
 export function Sidebar() {
@@ -61,12 +53,6 @@ export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const authUser = useSelector((state: RootState) => state.auth.user);
-
-  const savedUser = localStorage.getItem("user");
-  const fallbackUser = savedUser ? (JSON.parse(savedUser) as { name?: string; email?: string; role?: string }) : null;
-  const displayName = authUser?.name ?? fallbackUser?.name ?? "Unknown User";
-  const displayEmail = authUser?.email ?? fallbackUser?.email ?? "No email";
-  const displayRole = (authUser?.role ?? fallbackUser?.role ?? "member").toUpperCase();
 
   const handleLogout = () => {
     dispatch(logout());
@@ -78,41 +64,23 @@ export function Sidebar() {
   };
 
   return (
-    <ShadcnSidebar className="bg-[#F3F4F6]">
-      <SidebarHeader className="p-4 pb-2">
+    <ShadcnSidebar collapsible="icon" className="bg-[#F3F4F6] border-r-0 [--sidebar-width-icon:4.5rem]">
+      <SidebarHeader className="h-15 flex flex-row items-center px-3 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:justify-center justify-start border-none">
         {/* Brand */}
-        <div className="flex items-center gap-2 px-2 pb-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A3F191] text-[#0A3622]">
-            <Feather className="h-5 w-5" strokeWidth={2.5} />
-          </div>
-          <span className="text-[20px] font-bold text-[#0A3622] tracking-tight">SanityFlow</span>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-secondary text-brand-primary shadow-sm hover:scale-105 transition-transform">
+          <Droplet className="h-4 w-4" fill="currentColor" strokeWidth={1.5} />
         </div>
-
-        {/* Profile */}
-        <div className="mb-2 flex items-center justify-between rounded-[14px] bg-white p-2 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
-            <img
-              src="https://github.com/shadcn.png"
-              alt={displayName}
-              className="h-10 w-10 rounded-full object-cover"
-            />
-            <div className="flex flex-col">
-              <span className="font-semibold text-gray-800 text-[13px]">{displayName}</span>
-              <span className="text-[12px] text-gray-500 font-medium">{displayRole} • {displayEmail}</span>
-            </div>
-          </div>
-          <ChevronDown className="h-4 w-4 text-gray-500 mr-1" />
-        </div>
+        <span className="text-[16px] font-bold text-brand-primary tracking-tight font-heading group-data-[collapsible=icon]:hidden whitespace-nowrap overflow-hidden transition-all duration-300 ml-2">SanityFlow</span>
       </SidebarHeader>
 
-      <SidebarContent className="px-4 flex flex-col">
+      <SidebarContent className="px-3 group-data-[collapsible=icon]:px-1.5 flex flex-col mt-2">
         {/* Main Menu */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 px-2 py-4">
+        <SidebarGroup className="p-0 group-data-[collapsible=icon]:p-1">
+          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-wider text-brand-gray px-3 py-4 group-data-[collapsible=icon]:opacity-0 transition-opacity">
             MAIN MENU
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {mainMenu.filter((item) => item.roles.includes(authUser?.role ?? 'member')).map((item) => {
                 const isActive = location.pathname === item.href || (location.pathname.startsWith(item.href) && item.href !== '/');
                 return (
@@ -120,11 +88,16 @@ export function Sidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className={isActive ? "bg-white text-gray-900 shadow-[0_2px_8px_rgb(0,0,0,0.04)] font-semibold rounded-xl py-5" : "text-gray-500 hover:bg-gray-200 hover:text-gray-700 font-medium rounded-xl py-5"}
+                      tooltip={item.name}
+                      className={`transition-all group-data-[collapsible=icon]:mx-auto ${
+                        isActive 
+                        ? "bg-white text-brand-primary shadow-sm font-semibold rounded-xl" 
+                        : "text-brand-gray hover:bg-brand-primary/5 hover:text-brand-primary font-medium rounded-xl"
+                      }`}
                     >
-                      <Link to={item.href}>
-                        <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
-                        <span className="text-[14px]">{item.name}</span>
+                      <Link to={item.href} className="flex w-full items-center py-2.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-0">
+                        <item.icon className="h-4.5 w-4.5 shrink-0" strokeWidth={isActive ? 2.4 : 2} />
+                        <span className="text-[13px] ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 group-data-[collapsible=icon]:hidden">{item.name}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -134,43 +107,19 @@ export function Sidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Preferences */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 px-2 py-4 text-left">
-            PREFERENCE
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {preferences.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      className={isActive ? "bg-white text-gray-900 shadow-[0_2px_8px_rgb(0,0,0,0.04)] font-semibold rounded-xl py-5" : "text-gray-500 hover:bg-gray-200 hover:text-gray-700 font-medium rounded-xl py-5"}
-                    >
-                      <Link to={item.href}>
-                        <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
-                        <span className="text-[14px]">{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <div className="mt-auto pb-3">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 rounded-[12px] border border-gray-200 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
+        <div className="mt-auto pb-5 px-1 group-data-[collapsible=icon]:px-0">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleLogout}
+                tooltip="Logout"
+                className="text-brand-gray hover:bg-brand-primary/5 hover:text-brand-primary font-medium rounded-xl py-3 w-full flex items-center justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:mx-auto transition-all"
+              >
+                <LogOut className="h-4.5 w-4.5 shrink-0" strokeWidth={2} />
+                <span className="text-[13px] ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 group-data-[collapsible=icon]:hidden">Logout</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </div>
       </SidebarContent>
     </ShadcnSidebar>

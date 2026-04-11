@@ -19,12 +19,13 @@ import { forumApi } from "@/features/forum/forumApi";
 import { distributionApi } from "@/features/distribution/distributionApi";
 import { beneficiaryApi } from "@/features/beneficiary/beneficiaryApi";
 import type { AppDispatch, RootState } from "@/store";
-import { mainMenu } from "./Sidebar";
+import { mainMenu } from "./mainMenu";
 
 export function Header() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const authUser = useSelector((state: RootState) => state.auth.user);
+  const currentRole = authUser?.role ?? "member";
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +53,7 @@ export function Header() {
 
   const filteredMenu = useMemo(() => {
     const allowedItems = mainMenu.filter((item) =>
-      item.roles.includes(authUser?.role ?? "member")
+      item.roles.includes(currentRole)
     );
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -63,7 +64,7 @@ export function Header() {
     return allowedItems.filter((item) =>
       item.name.toLowerCase().includes(normalizedQuery)
     );
-  }, [authUser?.role, searchQuery]);
+  }, [currentRole, searchQuery]);
 
   const goToMenuItem = (href: string) => {
     navigate(href);
@@ -137,7 +138,7 @@ export function Header() {
 
         <div className="flex items-center mx-1">
           {authUser?.role === 'admin' && (
-            <button onClick={() => navigate('/settings')} className="p-1.5 text-brand-gray hover:text-brand-primary hover:bg-brand-secondary/20 rounded-lg transition-colors">
+            <button onClick={() => navigate('/dashboard/settings')} className="p-1.5 text-brand-gray hover:text-brand-primary hover:bg-brand-secondary/20 rounded-lg transition-colors">
               <Settings className="w-4.5 h-4.5" strokeWidth={2} />
             </button>
           )}
@@ -168,7 +169,7 @@ export function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/profile')} className="text-brand-gray cursor-pointer focus:text-brand-primary focus:bg-brand-primary/5">
+            <DropdownMenuItem onClick={() => navigate('/dashboard/profile')} className="text-brand-gray cursor-pointer focus:text-brand-primary focus:bg-brand-primary/5">
               <UserIcon className="mr-2 h-4 w-4" />
               <span>Profile Settings</span>
             </DropdownMenuItem>

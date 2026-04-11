@@ -13,7 +13,7 @@ export function Topbar() {
         <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
       </div>
       <div className="flex items-center gap-2 sm:gap-6 ml-4">
-        <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+        <Link to="/dashboard/profile" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
           <UserCircle className="h-6 w-6" />
           <span className="hidden sm:inline">{user?.name ?? user?.email}</span>
         </Link>

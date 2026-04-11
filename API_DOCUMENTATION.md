@@ -147,3 +147,22 @@ Base URL: `http://localhost:3000/api/v1`
 | Method | Endpoint                | Auth | Description                    |
 |--------|-------------------------|------|--------------------------------|
 | GET    | `/weather/:location`    | Yes  | Get weather for a location     |
+
+---
+
+## Third-Party Integrations
+
+### Email Notifications (Resend API)
+
+The system uses [Resend](https://resend.com) to send automated email notifications. These are triggered internally by the backend — there are no direct API endpoints for email.
+
+| Trigger | Recipient | Description |
+|---------|-----------|-------------|
+| Driver assigned to a distribution order | Driver's email | Notifies the driver with order ID and delivery location |
+| Resource quantity falls below reorder level | Admin email (`ALERT_EMAIL`) | Low stock alert with resource details and supplier info |
+
+**Environment variables required:**
+```env
+EMAIL_API_KEY=<your_resend_api_key>
+ALERT_EMAIL=<admin_alert_email>
+```

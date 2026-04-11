@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -24,7 +24,7 @@ export function CreateWaterSourceForm() {
     notes: ""
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     try {
       await createWaterSource({
@@ -63,7 +63,10 @@ export function CreateWaterSourceForm() {
           </div>
           <div className="space-y-2">
             <Label className="text-gray-700 font-semibold">Type<span className="text-red-500 ml-1">*</span></Label>
-            <Select value={formData.type} onValueChange={(val: any) => setFormData({...formData, type: val})}>
+            <Select
+              value={formData.type}
+              onValueChange={(val: "well" | "tap" | "borehole") => setFormData({ ...formData, type: val })}
+            >
               <SelectTrigger className="h-11 rounded-xl bg-white">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
@@ -107,7 +110,7 @@ export function CreateWaterSourceForm() {
             value={formData.notes}
             onChange={(e) => setFormData({...formData, notes: e.target.value})}
             placeholder="Any particular details..." 
-            className="min-h-[100px] rounded-xl resize-y" 
+            className="min-h-25 rounded-xl resize-y" 
           />
         </div>
 
@@ -143,31 +146,23 @@ export function UpdateWaterSourceForm() {
   const [updateWaterSource, { isLoading: isUpdating }] = useUpdateWaterSourceMutation()
 
   const [formData, setFormData] = useState<{
-    isActive: string;
-    condition: "Good" | "Fair" | "Poor";
+    isActive: string | null;
+    condition: "Good" | "Fair" | "Poor" | null;
   }>({
-    isActive: "true",
-    condition: "Good"
+    isActive: null,
+    condition: null,
   })
 
-  useEffect(() => {
-    if (source) {
-      setFormData({
-        isActive: source.isActive.toString(),
-        condition: source.condition
-      })
-    }
-  }, [source])
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!id) return
+    const currentSource = source
+    if (!id || !currentSource) return
     try {
       await updateWaterSource({
         id,
         body: {
-          isActive: formData.isActive === "true",
-          condition: formData.condition
+          isActive: (formData.isActive ?? currentSource.isActive.toString()) === "true",
+          condition: formData.condition ?? currentSource.condition,
         }
       }).unwrap()
       navigate("/dashboard/water-sources")
@@ -190,7 +185,10 @@ export function UpdateWaterSourceForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label className="text-gray-700 font-semibold">Status<span className="text-red-500 ml-1">*</span></Label>
-            <Select value={formData.isActive} onValueChange={(val) => setFormData({...formData, isActive: val})}>
+            <Select
+              value={formData.isActive ?? source.isActive.toString()}
+              onValueChange={(val) => setFormData({ ...formData, isActive: val })}
+            >
               <SelectTrigger className="h-11 rounded-xl bg-white border-emerald-200">
                 <SelectValue />
               </SelectTrigger>
@@ -202,7 +200,10 @@ export function UpdateWaterSourceForm() {
           </div>
           <div className="space-y-2">
             <Label className="text-gray-700 font-semibold">Condition<span className="text-red-500 ml-1">*</span></Label>
-            <Select value={formData.condition} onValueChange={(val: any) => setFormData({...formData, condition: val})}>
+            <Select
+              value={formData.condition ?? source.condition}
+              onValueChange={(val: "Good" | "Fair" | "Poor") => setFormData({ ...formData, condition: val })}
+            >
               <SelectTrigger className="h-11 rounded-xl bg-white border-emerald-200">
                 <SelectValue />
               </SelectTrigger>

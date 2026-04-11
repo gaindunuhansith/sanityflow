@@ -51,7 +51,7 @@ export function CreateWaterTestForm() {
     )
   }, [formData])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     setErrorMessage("")
 
@@ -162,7 +162,7 @@ export function CreateWaterTestForm() {
             value={formData.notes}
             onChange={(event) => setFormData((prev) => ({ ...prev, notes: event.target.value }))}
             placeholder="Any visual observations or lab notes..."
-            className="min-h-[100px] rounded-xl resize-y"
+            className="min-h-25 rounded-xl resize-y"
           />
         </div>
 
@@ -228,7 +228,7 @@ export function UpdateWaterTestForm() {
     })
   }, [test])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     setErrorMessage("")
 
@@ -360,7 +360,7 @@ export function UpdateWaterTestForm() {
           <Textarea
             value={formData.notes}
             onChange={(event) => setFormData((prev) => ({ ...prev, notes: event.target.value }))}
-            className="min-h-[100px] rounded-xl resize-y"
+            className="min-h-25 rounded-xl resize-y"
           />
         </div>
 

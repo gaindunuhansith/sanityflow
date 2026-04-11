@@ -78,7 +78,7 @@ describe('driver.controller', () => {
 
     await getAllDriversController(req, res as any, next);
 
-    expect(getAllDrivers).toHaveBeenCalledWith(undefined);
+    expect(getAllDrivers).toHaveBeenCalledWith({});
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(drivers);
   });

@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Header } from "./Header";
 
 export function DashboardLayout() {
   return (
@@ -8,10 +9,8 @@ export function DashboardLayout() {
       <div className="flex min-h-screen bg-gray-50/50 text-foreground w-full">
         <Sidebar />
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center justify-between border-b px-6">
-            <SidebarTrigger />
-          </header>
-          <main className="flex-1 flex-col p-6 overflow-auto">
+          <Header />
+          <main className="flex-1 flex-col p-6 overflow-auto bg-[#f8fafc]">
             <Outlet />
           </main>
         </SidebarInset>

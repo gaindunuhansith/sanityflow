@@ -166,7 +166,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 rounded-[12px] border border-gray-200 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700 hover:bg-gray-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700 hover:bg-gray-50"
           >
             <LogOut className="h-4 w-4" />
             Logout

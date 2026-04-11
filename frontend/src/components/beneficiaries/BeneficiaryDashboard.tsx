@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { ChevronRight, ChevronsUpDown, Download, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
@@ -154,7 +154,7 @@ export function BeneficiaryDashboard() {
 
   const queryParams = useMemo(() => {
     return {
-      ...(eligibilityFilter !== "all" ? { eligibilityStatus: eligibilityFilter } : {}),
+      ...(eligibilityFilter === "all" ? {} : { eligibilityStatus: eligibilityFilter }),
       ...(searchText.trim().length > 0 ? { search: searchText.trim() } : {}),
       page: currentPage,
       limit: pageSize,
@@ -171,15 +171,9 @@ export function BeneficiaryDashboard() {
   const [updateBeneficiary, { isLoading: isUpdatingBeneficiary }] = useUpdateBeneficiaryMutation()
   const [deleteBeneficiary, { isLoading: isDeletingBeneficiary }] = useDeleteBeneficiaryMutation()
 
-  const beneficiaries = beneficiaryResponse?.items ?? []
+  const beneficiaries = useMemo(() => beneficiaryResponse?.items ?? [], [beneficiaryResponse])
   const totalBeneficiaries = beneficiaryResponse?.total ?? 0
   const totalPages = beneficiaryResponse?.totalPages ?? 1
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
-  }, [currentPage, totalPages])
 
   const handleToggleExpand = (beneficiary: Beneficiary) => {
     dispatch(toggleExpandedBeneficiary(beneficiary._id))
@@ -341,6 +335,134 @@ export function BeneficiaryDashboard() {
     }
   }
 
+  const tableRows = (() => {
+    if (isLoading) {
+      return (
+        <TableRow className="border-b border-gray-50">
+          <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
+            Loading beneficiaries...
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    if (isError) {
+      return (
+        <TableRow className="border-b border-gray-50">
+          <TableCell colSpan={6} className="py-10 text-center text-sm text-red-600">
+            Failed to load beneficiaries. Click the filter icon to retry.
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    if (beneficiaries.length === 0) {
+      return (
+        <TableRow className="border-b border-gray-50">
+          <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
+            <p className="text-sm font-medium text-gray-700 mb-1">No beneficiaries match your current filters.</p>
+            <p className="text-xs text-gray-500">Try clearing filters or changing the search keyword.</p>
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    return beneficiaries.map((beneficiary) => {
+      const isExpanded = expandedBeneficiaryIds.includes(beneficiary._id)
+
+      return (
+        <Fragment key={beneficiary._id}>
+          <TableRow
+            className={`group transition-colors border-b ${
+              isExpanded
+                ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100"
+                : "hover:bg-gray-50/50 border-gray-50"
+            }`}
+          >
+            <TableCell className="pl-4 py-4">
+              <button
+                onClick={() => handleToggleExpand(beneficiary)}
+                className="flex items-center gap-3 text-left w-full focus:outline-none group"
+              >
+                <ChevronRight
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                    isExpanded ? "rotate-90 text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
+                  }`}
+                />
+                <div className="h-9.5 w-9.5 shrink-0 rounded-full bg-[#c7f7d4] flex items-center justify-center">
+                  <span className="text-[12px] font-semibold text-[#0F392B]">{getBeneficiaryInitials(beneficiary.name)}</span>
+                </div>
+                <div className="flex flex-col max-w-[320px]">
+                  <span className={`font-semibold text-[13px] truncate pr-4 ${isExpanded ? "text-emerald-900" : "text-gray-900"}`}>
+                    {beneficiary.name}
+                  </span>
+                  <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
+                    {beneficiary.location}
+                  </span>
+                </div>
+              </button>
+            </TableCell>
+            <TableCell className="text-sm font-medium text-gray-700 py-4">{beneficiary.contact}</TableCell>
+            <TableCell className="text-sm font-medium text-gray-600 py-4">{beneficiary.location}</TableCell>
+            <TableCell className="text-sm font-medium text-gray-600 py-4">{beneficiary.familySize}</TableCell>
+            <TableCell className="py-4">
+              <span
+                className={`inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold whitespace-nowrap ${getEligibilityBadgeClass(
+                  beneficiary.eligibilityStatus
+                )}`}
+              >
+                {beneficiary.eligibilityStatus}
+              </span>
+            </TableCell>
+            <TableCell className="text-right pr-6 py-4">
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                  onClick={() => openEditDialog(beneficiary._id)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => openDeleteDialog(beneficiary._id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+
+          {isExpanded ? (
+            <TableRow className="bg-emerald-50/5 border-b border-gray-100 hover:bg-emerald-50/5">
+              <TableCell colSpan={6} className="p-0">
+                <div className="bg-emerald-50/20 border-t border-emerald-100/50 px-8 py-5">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Beneficiary ID</p>
+                      <p className="text-sm font-medium text-gray-800 break-all">{beneficiary._id}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Created</p>
+                      <p className="text-sm font-medium text-gray-800">{new Date(beneficiary.createdAt).toLocaleDateString("en-US")}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Updated</p>
+                      <p className="text-sm font-medium text-gray-800">{new Date(beneficiary.updatedAt).toLocaleDateString("en-US")}</p>
+                    </div>
+                  </div>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : null}
+        </Fragment>
+      )
+    })
+  })()
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       <div className="flex items-center justify-between mb-6">
@@ -433,7 +555,7 @@ export function BeneficiaryDashboard() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-100">
-        <Table className="w-full min-w-[980px] text-left">
+        <Table className="w-full min-w-245 text-left">
           <TableHeader>
             <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
               <TableHead className="text-gray-500 font-semibold text-xs w-[34%] py-4 pl-4">Beneficiary</TableHead>
@@ -450,121 +572,7 @@ export function BeneficiaryDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow className="border-b border-gray-50">
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
-                  Loading beneficiaries...
-                </TableCell>
-              </TableRow>
-            ) : isError ? (
-              <TableRow className="border-b border-gray-50">
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-red-600">
-                  Failed to load beneficiaries. Click the filter icon to retry.
-                </TableCell>
-              </TableRow>
-            ) : beneficiaries.length === 0 ? (
-              <TableRow className="border-b border-gray-50">
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-500">
-                  <p className="text-sm font-medium text-gray-700 mb-1">No beneficiaries match your current filters.</p>
-                  <p className="text-xs text-gray-500">Try clearing filters or changing the search keyword.</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              beneficiaries.map((beneficiary) => {
-                const isExpanded = expandedBeneficiaryIds.includes(beneficiary._id)
-
-                return (
-                  <Fragment key={beneficiary._id}>
-                    <TableRow
-                      className={`group transition-colors border-b ${
-                        isExpanded
-                          ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100"
-                          : "hover:bg-gray-50/50 border-gray-50"
-                      }`}
-                    >
-                      <TableCell className="pl-4 py-4">
-                        <button
-                          onClick={() => handleToggleExpand(beneficiary)}
-                          className="flex items-center gap-3 text-left w-full focus:outline-none group"
-                        >
-                          <ChevronRight
-                            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                              isExpanded ? "rotate-90 text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
-                            }`}
-                          />
-                          <div className="h-9.5 w-9.5 shrink-0 rounded-full bg-[#c7f7d4] flex items-center justify-center">
-                            <span className="text-[12px] font-semibold text-[#0F392B]">{getBeneficiaryInitials(beneficiary.name)}</span>
-                          </div>
-                          <div className="flex flex-col max-w-[320px]">
-                            <span className={`font-semibold text-[13px] truncate pr-4 ${isExpanded ? "text-emerald-900" : "text-gray-900"}`}>
-                              {beneficiary.name}
-                            </span>
-                            <span className="text-[11px] text-gray-500 mt-0.5 truncate pr-4">
-                              {beneficiary.location}
-                            </span>
-                          </div>
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-sm font-medium text-gray-700 py-4">{beneficiary.contact}</TableCell>
-                      <TableCell className="text-sm font-medium text-gray-600 py-4">{beneficiary.location}</TableCell>
-                      <TableCell className="text-sm font-medium text-gray-600 py-4">{beneficiary.familySize}</TableCell>
-                      <TableCell className="py-4">
-                        <span
-                          className={`inline-flex items-center justify-center px-3 tracking-wide py-1 rounded-md text-[11px] font-semibold whitespace-nowrap ${getEligibilityBadgeClass(
-                            beneficiary.eligibilityStatus
-                          )}`}
-                        >
-                          {beneficiary.eligibilityStatus}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right pr-6 py-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                            onClick={() => openEditDialog(beneficiary._id)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => openDeleteDialog(beneficiary._id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-
-                    {isExpanded ? (
-                      <TableRow className="bg-emerald-50/5 border-b border-gray-100 hover:bg-emerald-50/5">
-                        <TableCell colSpan={6} className="p-0">
-                          <div className="bg-emerald-50/20 border-t border-emerald-100/50 px-8 py-5">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                              <div>
-                                <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Beneficiary ID</p>
-                                <p className="text-sm font-medium text-gray-800 break-all">{beneficiary._id}</p>
-                              </div>
-                              <div>
-                                <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Created</p>
-                                <p className="text-sm font-medium text-gray-800">{new Date(beneficiary.createdAt).toLocaleDateString("en-US")}</p>
-                              </div>
-                              <div>
-                                <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Updated</p>
-                                <p className="text-sm font-medium text-gray-800">{new Date(beneficiary.updatedAt).toLocaleDateString("en-US")}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                  </Fragment>
-                )
-              })
-            )}
+            {tableRows}
           </TableBody>
         </Table>
       </div>
@@ -583,7 +591,7 @@ export function BeneficiaryDashboard() {
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className="h-9 w-[92px] rounded-lg border-gray-200 bg-white">
+              <SelectTrigger className="h-9 w-23 rounded-lg border-gray-200 bg-white">
                 <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>
@@ -695,7 +703,16 @@ export function BeneficiaryDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(selectedBeneficiaryIdForEdit)} onOpenChange={(isOpen) => (!isOpen ? closeEditDialog() : undefined)}>
+      <Dialog
+        open={Boolean(selectedBeneficiaryIdForEdit)}
+        onOpenChange={(isOpen) => {
+          if (isOpen) {
+            return
+          }
+
+          closeEditDialog()
+        }}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Beneficiary</DialogTitle>
@@ -778,7 +795,16 @@ export function BeneficiaryDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(selectedBeneficiaryIdForDelete)} onOpenChange={(isOpen) => (!isOpen ? closeDeleteDialog() : undefined)}>
+      <Dialog
+        open={Boolean(selectedBeneficiaryIdForDelete)}
+        onOpenChange={(isOpen) => {
+          if (isOpen) {
+            return
+          }
+
+          closeDeleteDialog()
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Beneficiary</DialogTitle>

@@ -14,6 +14,8 @@ import { BeneficiaryDashboard } from "./components/beneficiaries/BeneficiaryDash
 import { ResourceDashboard } from "./components/inventory/ResourceDashboard";
 import { SupplierDashboard } from "./components/inventory/SupplierDashboard";
 import { InventoryTransactionDashboard } from "./components/inventory/InventoryTransactionDashboard";
+import { ProfilePage } from "./components/profile/ProfilePage";
+import { AdminSettingsPage } from "./components/profile/AdminSettingsPage";
 
 const router = createBrowserRouter([
   {
@@ -122,8 +124,13 @@ const router = createBrowserRouter([
             children: [{ index: true, element: <InventoryTransactionDashboard /> }]
           },
           {
+            path: "profile",
+            element: <ProfilePage />
+          },
+          {
             path: "settings",
-            element: <div>Settings Placeholder</div>
+            element: <ProtectedRoute allowedRoles={['admin']} />,
+            children: [{ index: true, element: <AdminSettingsPage /> }]
           }
         ]
       }

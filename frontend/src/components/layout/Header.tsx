@@ -136,9 +136,11 @@ export function Header() {
         </div>
 
         <div className="flex items-center mx-1">
-          <button className="p-1.5 text-brand-gray hover:text-brand-primary hover:bg-brand-secondary/20 rounded-lg transition-colors">
-            <Settings className="w-4.5 h-4.5" strokeWidth={2} />
-          </button>
+          {authUser?.role === 'admin' && (
+            <button onClick={() => navigate('/settings')} className="p-1.5 text-brand-gray hover:text-brand-primary hover:bg-brand-secondary/20 rounded-lg transition-colors">
+              <Settings className="w-4.5 h-4.5" strokeWidth={2} />
+            </button>
+          )}
           <button className="p-1.5 text-brand-gray hover:text-brand-primary hover:bg-brand-secondary/20 rounded-lg transition-colors">
             <HelpCircle className="w-4.5 h-4.5" strokeWidth={2} />
           </button>
@@ -166,7 +168,7 @@ export function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-brand-gray cursor-pointer focus:text-brand-primary focus:bg-brand-primary/5">
+            <DropdownMenuItem onClick={() => navigate('/profile')} className="text-brand-gray cursor-pointer focus:text-brand-primary focus:bg-brand-primary/5">
               <UserIcon className="mr-2 h-4 w-4" />
               <span>Profile Settings</span>
             </DropdownMenuItem>

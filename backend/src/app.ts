@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
+import profileRoutes from './routes/profile.routes.js';
 import issueRoutes from './routes/issue.routes.js';
 import waterTestRoutes from './routes/waterTest.routes.js';
 import waterSourceRoutes from './routes/waterSource.routes.js';
@@ -32,6 +33,7 @@ app.use(apiRateLimiter);
 
 //routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/water-tests', waterTestRoutes);
 app.use('/api/v1/water-sources', waterSourceRoutes);

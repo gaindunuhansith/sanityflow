@@ -6,6 +6,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  --font-heading: "Space Grotesk", sans-serif;
+  --font-alt: "Urbanist", sans-serif;
+
   --color-brand-primary: #062F28;
   --color-brand-secondary: #9FE870;
   --color-brand-gray: #7B7B7B;

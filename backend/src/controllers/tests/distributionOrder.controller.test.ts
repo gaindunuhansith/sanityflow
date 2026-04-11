@@ -66,7 +66,7 @@ describe('distributionOrder.controller', () => {
   });
 
   it('getAllDistributionOrders should return 200 with all orders', async () => {
-    const req = { query: {} } as any;
+    const req = { query: {}, user: { role: 'admin' } } as any;
     const res = createMockRes();
     const next = jest.fn();
     const orders = [{ _id: 'ord1' }, { _id: 'ord2' }];
@@ -76,15 +76,12 @@ describe('distributionOrder.controller', () => {
 
     await getAllDistributionOrders(req, res as any, next);
 
-    expect(distributionOrderService.getAllDistributionOrders).toHaveBeenCalledWith({
-      status: undefined,
-      driver: undefined,
-    } as any);
+    expect(distributionOrderService.getAllDistributionOrders).toHaveBeenCalledWith({});
     expect(res.json).toHaveBeenCalledWith(orders);
   });
 
   it('getAllDistributionOrders should pass status and driver filters', async () => {
-    const req = { query: { status: 'Assigned', driver: 'drv1' } } as any;
+    const req = { query: { status: 'Assigned', driver: 'drv1' }, user: { role: 'admin' } } as any;
     const res = createMockRes();
     const next = jest.fn();
     const orders = [{ _id: 'ord1', status: 'Assigned' }];
@@ -102,17 +99,17 @@ describe('distributionOrder.controller', () => {
   });
 
   it('getDistributionOrderById should return 200 with a single order', async () => {
-    const req = { params: { id: 'ord1' } } as any;
+    const req = { params: { id: 'ord1' }, user: { role: 'admin' } } as any;
     const res = createMockRes();
     const next = jest.fn();
-    const order = { _id: 'ord1', targetLocation: 'Galle' };
+    const order = { _id: 'ord1' };
 
     (distributionOrderService.getDistributionOrderById as jest.MockedFunction<typeof distributionOrderService.getDistributionOrderById>)
       .mockResolvedValue(order as any);
 
     await getDistributionOrderById(req, res as any, next);
 
-    expect(distributionOrderService.getDistributionOrderById).toHaveBeenCalledWith('ord1');
+    expect(distributionOrderService.getDistributionOrderById).toHaveBeenCalledWith('ord1', { role: 'admin' });
     expect(res.json).toHaveBeenCalledWith(order);
   });
 
@@ -135,7 +132,7 @@ describe('distributionOrder.controller', () => {
   });
 
   it('updateDeliveryStatus should return 200 with updated status', async () => {
-    const req = { params: { id: 'ord1' }, body: { status: 'In Transit' } } as any;
+    const req = { params: { id: 'ord1' }, body: { status: 'In Transit' }, user: { userId: 'uid1' } } as any;
     const res = createMockRes();
     const next = jest.fn();
     const parsedBody = { status: 'In Transit' };
@@ -148,7 +145,7 @@ describe('distributionOrder.controller', () => {
     await updateDeliveryStatus(req, res as any, next);
 
     expect(updateDeliveryStatusSchema.parse).toHaveBeenCalledWith(req.body);
-    expect(distributionOrderService.updateDeliveryStatus).toHaveBeenCalledWith('ord1', 'In Transit');
+    expect(distributionOrderService.updateDeliveryStatus).toHaveBeenCalledWith('ord1', 'In Transit', 'uid1');
     expect(res.json).toHaveBeenCalledWith(updated);
   });
 
@@ -186,7 +183,7 @@ describe('distributionOrder.controller', () => {
   });
 
   it('should call next(error) when service throws in getAllDistributionOrders', async () => {
-    const req = { query: {} } as any;
+    const req = { query: {}, user: { role: 'admin' } } as any;
     const res = createMockRes();
     const next = jest.fn();
     const error = new Error('Database failed');

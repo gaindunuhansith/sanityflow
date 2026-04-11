@@ -1,18 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  Home,
-  Feather,
-  MessageSquare,
-  Users,
-  Truck,
-  Package,
   Droplet,
-  AlertTriangle,
-  ShieldCheck,
   LogOut,
-  Boxes,
-  Store,
 } from "lucide-react";
 import { logout } from "@/features/auth/authSlice";
 import { authApi } from "@/features/auth/authApi";
@@ -32,27 +22,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
-export const mainMenu = [
-  { name: "Dashboard", href: "/", icon: Home, roles: ['admin', 'member', 'driver'] },
-  { name: "Blog", href: "/blog", icon: Feather, roles: ['admin', 'member'] },
-  { name: "Forum", href: "/forum", icon: MessageSquare, roles: ['admin', 'member'] },
-  { name: "Issues", href: "/issues", icon: AlertTriangle, roles: ['admin', 'member'] },
-  { name: "Beneficiary", href: "/beneficiaries", icon: Users, roles: ['admin', 'member'] },
-  { name: "Drivers", href: "/drivers", icon: Users, roles: ['admin', 'member'] },
-  { name: "Distribution", href: "/distributions", icon: Truck, roles: ['admin', 'member', 'driver'] },
-  { name: "Resources", href: "/resources", icon: Boxes, roles: ['admin', 'member'] },
-  { name: "Supplier", href: "/suppliers", icon: Store, roles: ['admin', 'member'] },
-  { name: "Inventory Transactions", href: "/inventory-transactions", icon: Package, roles: ['admin', 'member'] },
-  { name: "Water Source", href: "/water-sources", icon: Droplet, roles: ['admin', 'member'] },
-  { name: "Water Quality", href: "/water-tests", icon: ShieldCheck, roles: ['admin', 'member'] },
-];
+import { mainMenu } from "./mainMenu";
 
 export function Sidebar() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
   const authUser = useSelector((state: RootState) => state.auth.user);
+  const currentRole = authUser?.role ?? "member";
 
   const handleLogout = () => {
     dispatch(logout());
@@ -81,8 +58,12 @@ export function Sidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {mainMenu.filter((item) => item.roles.includes(authUser?.role ?? 'member')).map((item) => {
-                const isActive = location.pathname === item.href || (location.pathname.startsWith(item.href) && item.href !== '/');
+              {mainMenu
+                .filter((item) => item.roles.includes(currentRole))
+                .map((item) => {
+                const isActive = item.href === "/dashboard"
+                  ? location.pathname === "/dashboard"
+                  : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton

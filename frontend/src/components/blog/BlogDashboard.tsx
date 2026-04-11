@@ -1,12 +1,24 @@
-import { useMemo, useState, useEffect } from "react"
+﻿import { useMemo, useState } from "react"
 import { Search, Plus, Pencil, Trash2 } from "lucide-react"
-import { 
-  useGetBlogsQuery, 
+
+import {
+  useGetBlogsQuery,
   useDeleteBlogMutation,
   useCreateBlogMutation,
   useUpdateBlogMutation,
-  type BlogPostStatus
+  type BlogPostStatus,
 } from "@/features/blog/blogApi"
+import {
+  selectBlogState,
+  setBlogLimit,
+  setBlogPage,
+  setBlogSearchQuery,
+  setBlogStatusFilter,
+  setCreateBlogModalOpen,
+  setEditingBlogPostId,
+} from "@/features/blog/blogSlice"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -25,13 +37,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { useAppDispatch, useAppSelector } from "@/hooks/redux"
-import {
-  selectBlogState,
-  setBlogSearchQuery,
-  setCreateBlogModalOpen,
-  setEditingBlogPostId,
-} from "@/features/blog/blogSlice"
 
 export function BlogDashboard() {
   const dispatch = useAppDispatch()
@@ -48,7 +53,8 @@ export function BlogDashboard() {
   )
 
   const { data: response, isLoading, refetch } = useGetBlogsQuery(queryParams)
-  const blogs = useMemo(() => response?.posts || [], [response])
+  const blogs = useMemo(() => response?.posts ?? [], [response])
+  const totalPages = Math.max(1, response?.totalPages ?? 1)
 
   const [deleteBlog] = useDeleteBlogMutation()
   const [createBlog] = useCreateBlogMutation()
@@ -62,39 +68,16 @@ export function BlogDashboard() {
     status: "Draft" as BlogPostStatus,
   })
 
-  // Set form data when modal opens
-  useEffect(() => {
-    if (editingPostId) {
-      const blogToEdit = blogs.find(b => b._id === editingPostId)
-      if (blogToEdit) {
-        setFormData({
-          title: blogToEdit.title,
-          summary: blogToEdit.summary || "",
-          content: blogToEdit.content,
-          tags: blogToEdit.tags.join(", "),
-          status: blogToEdit.status,
-        })
-      }
-    } else if (isCreateModalOpen) {
-      setFormData({
-        title: "",
-        summary: "",
-        content: "",
-        tags: "",
-        status: "Draft",
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingPostId, isCreateModalOpen])
-
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this blog post?")) {
-      try {
-        await deleteBlog(id).unwrap()
-        refetch()
-      } catch (error) {
-        console.error("Failed to delete blog post", error)
-      }
+    if (!globalThis.confirm("Are you sure you want to delete this blog post?")) {
+      return
+    }
+
+    try {
+      await deleteBlog(id).unwrap()
+      await refetch()
+    } catch (error) {
+      console.error("Failed to delete blog post", error)
     }
   }
 
@@ -103,7 +86,7 @@ export function BlogDashboard() {
       title: formData.title,
       summary: formData.summary,
       content: formData.content,
-      tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean),
+      tags: formData.tags.split(",").map((t) => t.trim()).filter(Boolean),
       status: formData.status,
     }
 
@@ -114,7 +97,7 @@ export function BlogDashboard() {
         await createBlog(payload).unwrap()
       }
       handleCloseModal()
-      refetch()
+      await refetch()
     } catch (error) {
       console.error("Failed to save blog post:", error)
     }
@@ -125,24 +108,67 @@ export function BlogDashboard() {
     dispatch(setEditingBlogPostId(null))
   }
 
+  const handleOpenCreate = () => {
+    setFormData({
+      title: "",
+      summary: "",
+      content: "",
+      tags: "",
+      status: "Draft",
+    })
+    dispatch(setEditingBlogPostId(null))
+    dispatch(setCreateBlogModalOpen(true))
+  }
+
+  const handleOpenEdit = (postId: string) => {
+    const blogToEdit = blogs.find((blog) => blog._id === postId)
+
+    if (!blogToEdit) {
+      return
+    }
+
+    setFormData({
+      title: blogToEdit.title,
+      summary: blogToEdit.summary || "",
+      content: blogToEdit.content,
+      tags: blogToEdit.tags.join(", "),
+      status: blogToEdit.status,
+    })
+    dispatch(setEditingBlogPostId(postId))
+    dispatch(setCreateBlogModalOpen(false))
+  }
+
   return (
-    <div className="flex flex-col space-y-6">
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Blog Management</h1>
-        <Button onClick={() => dispatch(setCreateBlogModalOpen(true))}>
+        <h1 className="text-xl font-bold text-gray-900">Blog Management</h1>
+        <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium" onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" /> Add Blog Post
         </Button>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search posts..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => dispatch(setBlogSearchQuery(e.target.value))}
-          />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative w-70">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search posts"
+              className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
+              value={searchQuery}
+              onChange={(event) => dispatch(setBlogSearchQuery(event.target.value))}
+            />
+          </div>
+
+          <Select value={statusFilter} onValueChange={(value) => dispatch(setBlogStatusFilter(value as "all" | BlogPostStatus))}>
+            <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="Draft">Draft</SelectItem>
+              <SelectItem value="Published">Published</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -158,23 +184,17 @@ export function BlogDashboard() {
                     <h3 className="font-semibold">{blog.title}</h3>
                     <p className="text-sm text-muted-foreground">{blog.summary}</p>
                     <div className="flex items-center space-x-2 mt-2">
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${blog.status === 'Published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${blog.status === "Published" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
                         {blog.status}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(blog.createdAt).toLocaleDateString()}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{new Date(blog.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => dispatch(setEditingBlogPostId(blog._id))}
-                    >
+                    <Button variant="outline" size="icon" onClick={() => handleOpenEdit(blog._id)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="destructive" size="icon" onClick={() => handleDelete(blog._id)}>
+                    <Button variant="destructive" size="icon" onClick={() => void handleDelete(blog._id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -187,7 +207,27 @@ export function BlogDashboard() {
         </div>
       )}
 
-      {/* Edit / Create Dialog */}
+      <div className="flex items-center justify-end gap-2">
+        <span className="text-sm text-gray-500">Rows</span>
+        <Select value={String(limit)} onValueChange={(value) => dispatch(setBlogLimit(Number(value)))}>
+          <SelectTrigger className="h-9 w-23 rounded-lg border-gray-200 bg-white">
+            <SelectValue placeholder="10" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="10">10</SelectItem>
+            <SelectItem value="25">25</SelectItem>
+            <SelectItem value="50">50</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => dispatch(setBlogPage(page - 1))}>
+          Previous
+        </Button>
+        <span className="text-sm text-gray-600">Page {page} / {totalPages}</span>
+        <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => dispatch(setBlogPage(page + 1))}>
+          Next
+        </Button>
+      </div>
+
       <Dialog open={isCreateModalOpen || !!editingPostId} onOpenChange={handleCloseModal}>
         <DialogContent className="sm:max-w-156.25">
           <DialogHeader>
@@ -251,7 +291,7 @@ export function BlogDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseModal}>Cancel</Button>
-            <Button onClick={handleSave} disabled={!formData.title.trim() || !formData.content.trim()}>
+            <Button onClick={() => void handleSave()} disabled={!formData.title.trim() || !formData.content.trim()}>
               {editingPostId ? "Save Changes" : "Create Post"}
             </Button>
           </DialogFooter>

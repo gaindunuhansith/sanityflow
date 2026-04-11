@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from "react"
-import { Search, ChevronDown, SlidersHorizontal, Calendar, Download, ChevronRight, Pencil, Trash2, ChevronsUpDown, MessageSquareReply, Plus } from "lucide-react"
+﻿import React, { useMemo, useState } from "react"
+import { Search, ChevronRight, Pencil, Trash2, ChevronsUpDown, MessageSquareReply, Plus } from "lucide-react"
+
 import {
-  selectForumState,
   clearReplyDraft,
+  selectForumState,
   setCreateThreadModalOpen,
   setEditingThreadId,
-  setPeriodFilter,
   setSearchQuery,
   setStatusFilter,
   setTagFilter,
@@ -14,13 +14,13 @@ import {
 } from "@/features/forum/forumSlice"
 import {
   type ForumThread,
+  type ForumThreadStatus,
   useCreateForumReplyMutation,
   useCreateForumThreadMutation,
   useDeleteForumThreadMutation,
   useGetForumRepliesQuery,
   useGetForumThreadsQuery,
   useUpdateForumThreadMutation,
-  type ForumThreadStatus,
 } from "@/features/forum/forumApi"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 
@@ -46,9 +46,9 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
 
 const getApiErrorMessage = (error: unknown) => {
@@ -61,6 +61,7 @@ const getApiErrorMessage = (error: unknown) => {
 
   if (data && typeof data === "object") {
     const maybeMessage = data as { message?: unknown; error?: unknown }
+
     if (typeof maybeMessage.message === "string" && maybeMessage.message.trim().length > 0) {
       return maybeMessage.message
     }
@@ -81,11 +82,11 @@ export function ForumDashboard() {
     searchQuery,
     tagFilter,
     statusFilter,
-    periodFilter,
     replyDraftByThreadId,
     isCreateThreadModalOpen,
     editingThreadId,
   } = useAppSelector(selectForumState)
+
   const [createReply, { isLoading: isReplySubmitting }] = useCreateForumReplyMutation()
   const [createThread, { isLoading: isCreatingThread }] = useCreateForumThreadMutation()
   const [updateThread, { isLoading: isUpdatingThread }] = useUpdateForumThreadMutation()
@@ -98,6 +99,8 @@ export function ForumDashboard() {
     status: "Open" as ForumThreadStatus,
   })
   const [threadFormError, setThreadFormError] = useState("")
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
   const isAdminStatusOnlyMode = currentUserRole === "admin" && Boolean(editingThreadId)
 
   const threadQueryParams = useMemo(() => {
@@ -106,13 +109,13 @@ export function ForumDashboard() {
     const hasStatus = statusFilter === "all"
 
     return {
-      page: 1,
-      limit: 10,
+      page,
+      limit,
       ...(hasSearch ? { search: searchQuery.trim() } : {}),
       ...(hasTag ? {} : { tag: tagFilter }),
       ...(hasStatus ? {} : { status: statusFilter }),
     }
-  }, [searchQuery, statusFilter, tagFilter])
+  }, [searchQuery, statusFilter, tagFilter, page, limit])
 
   const {
     data: threadResult,
@@ -123,6 +126,8 @@ export function ForumDashboard() {
   } = useGetForumThreadsQuery(threadQueryParams)
 
   const threads = useMemo(() => threadResult?.threads ?? [], [threadResult?.threads])
+  const totalThreads = threadResult?.total ?? 0
+  const totalPages = Math.max(1, threadResult?.totalPages ?? 1)
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>()
     for (const thread of threads) {
@@ -133,10 +138,6 @@ export function ForumDashboard() {
 
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b))
   }, [threads])
-
-  const toggleExpand = (id: string) => {
-    dispatch(toggleExpandThread(id))
-  }
 
   const closeThreadModal = () => {
     dispatch(setCreateThreadModalOpen(false))
@@ -218,7 +219,7 @@ export function ForumDashboard() {
   }
 
   const handleDeleteThread = async (threadId: string) => {
-    if (!confirm("Are you sure you want to delete this thread?")) {
+    if (!globalThis.confirm("Are you sure you want to delete this thread?")) {
       return
     }
 
@@ -246,7 +247,6 @@ export function ForumDashboard() {
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-gray-900">Recent Threads</h1>
@@ -258,24 +258,8 @@ export function ForumDashboard() {
             New Thread
           </Button>
         </div>
-        <div className="flex items-center gap-3">
-          <Select value={periodFilter} onValueChange={(value) => dispatch(setPeriodFilter(value as "this-month" | "last-month" | "this-year"))}>
-            <SelectTrigger className="w-32.5 rounded-xl h-10 border-gray-200 bg-white">
-              <SelectValue placeholder="Period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="this-month">This Month</SelectItem>
-              <SelectItem value="last-month">Last Month</SelectItem>
-              <SelectItem value="this-year">This Year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 bg-white">
-            <SlidersHorizontal className="h-4 w-4 text-gray-600" />
-          </Button>
-        </div>
       </div>
 
-      {/* Filters Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="relative w-70">
@@ -283,12 +267,21 @@ export function ForumDashboard() {
             <Input
               placeholder="Search thread"
               value={searchQuery}
-              onChange={(event) => dispatch(setSearchQuery(event.target.value))}
+              onChange={(event) => {
+                dispatch(setSearchQuery(event.target.value))
+                setPage(1)
+              }}
               className="pl-9 h-10 rounded-xl bg-gray-50/50 border-0 focus-visible:ring-1 focus-visible:ring-green-500"
             />
           </div>
 
-          <Select value={statusFilter} onValueChange={(value) => dispatch(setStatusFilter(value as "all" | "Open" | "Closed"))}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              dispatch(setStatusFilter(value as "all" | "Open" | "Closed"))
+              setPage(1)
+            }}
+          >
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
@@ -299,7 +292,13 @@ export function ForumDashboard() {
             </SelectContent>
           </Select>
 
-          <Select value={tagFilter} onValueChange={(value) => dispatch(setTagFilter(value))}>
+          <Select
+            value={tagFilter}
+            onValueChange={(value) => {
+              dispatch(setTagFilter(value))
+              setPage(1)
+            }}
+          >
             <SelectTrigger className="w-35 h-10 rounded-xl border-gray-200 bg-white">
               <SelectValue placeholder="All Tags" />
             </SelectTrigger>
@@ -311,21 +310,8 @@ export function ForumDashboard() {
             </SelectContent>
           </Select>
         </div>
-
-        <div className="flex items-center gap-3 ml-auto">
-          <Button variant="outline" className="h-10 rounded-xl border-gray-200 bg-white text-gray-700 font-medium">
-            <Calendar className="mr-2 h-4 w-4 text-gray-500" />
-            1-30 September 2028
-            <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
-          </Button>
-          <Button className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-5 font-medium">
-            <Download className="mr-2 h-4 w-4" />
-            Download
-          </Button>
-        </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-hidden">
         <Table className="w-full text-left">
           <TableHeader>
@@ -355,7 +341,7 @@ export function ForumDashboard() {
               <TableRow>
                 <TableCell colSpan={5} className="py-10 text-center text-sm text-red-500">
                   Unable to load forum threads.
-                  <Button variant="link" className="ml-1 h-auto p-0 text-red-500" onClick={() => refetchThreads()}>
+                  <Button variant="link" className="ml-1 h-auto p-0 text-red-500" onClick={() => void refetchThreads()}>
                     Retry
                   </Button>
                 </TableCell>
@@ -371,27 +357,29 @@ export function ForumDashboard() {
             )}
 
             {threads.map((thread) => {
-              const isExpanded = expandedThreadIds.includes(thread._id);
+              const isExpanded = expandedThreadIds.includes(thread._id)
               const primaryTag = thread.tags?.[0] ?? "discussion"
 
               return (
                 <React.Fragment key={thread._id}>
-                  <TableRow 
+                  <TableRow
                     className={`group transition-colors border-b ${
-                      isExpanded 
-                        ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100" 
+                      isExpanded
+                        ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100"
                         : "hover:bg-gray-50/50 border-gray-50"
                     }`}
                   >
                     <TableCell className="pl-4 py-4">
-                      <button 
-                        onClick={() => toggleExpand(thread._id)} 
+                      <button
+                        onClick={() => dispatch(toggleExpandThread(thread._id))}
                         className="flex items-center gap-3 text-left w-full focus:outline-none group"
                       >
-                        <ChevronRight className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                          isExpanded ? "rotate-90 text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
-                        }`} />
-                        
+                        <ChevronRight
+                          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                            isExpanded ? "rotate-90 text-emerald-600" : "text-gray-400 group-hover:text-emerald-600"
+                          }`}
+                        />
+
                         <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] uppercase tracking-wide text-emerald-700">
                           {primaryTag}
                         </div>
@@ -407,7 +395,7 @@ export function ForumDashboard() {
                       </button>
                     </TableCell>
                     <TableCell className="text-sm font-medium text-gray-600 py-4">
-                       {thread.author?.name}
+                      {thread.author?.name}
                     </TableCell>
                     <TableCell className="text-center py-4">
                       <span className={thread.replyCount > 0 ? "text-emerald-700 font-semibold" : "text-gray-500 font-medium"}>
@@ -439,7 +427,7 @@ export function ForumDashboard() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => handleDeleteThread(thread._id)}
+                          onClick={() => void handleDeleteThread(thread._id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -447,7 +435,6 @@ export function ForumDashboard() {
                     </TableCell>
                   </TableRow>
 
-                  {/* Expanded Replies Section */}
                   {isExpanded && (
                     <TableRow className="bg-emerald-50/5 border-b border-gray-100 hover:bg-emerald-50/5">
                       <TableCell colSpan={5} className="p-0">
@@ -455,10 +442,8 @@ export function ForumDashboard() {
                           thread={thread}
                           draftValue={replyDraftByThreadId[thread._id] ?? ""}
                           isSubmittingReply={isReplySubmitting}
-                          onDraftChange={(value) =>
-                            dispatch(updateReplyDraft({ threadId: thread._id, value }))
-                          }
-                          onSubmit={() => submitReply(thread._id)}
+                          onDraftChange={(value) => dispatch(updateReplyDraft({ threadId: thread._id, value }))}
+                          onSubmit={() => void submitReply(thread._id)}
                         />
                       </TableCell>
                     </TableRow>
@@ -476,6 +461,48 @@ export function ForumDashboard() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <p>
+          Showing {threads.length} of {totalThreads} threads
+        </p>
+        <div className="flex items-center gap-2">
+          <span>Rows</span>
+          <Select
+            value={String(limit)}
+            onValueChange={(value) => {
+              setLimit(Number(value))
+              setPage(1)
+            }}
+          >
+            <SelectTrigger className="h-9 w-23 rounded-lg border-gray-200 bg-white">
+              <SelectValue placeholder="10" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+          >
+            Previous
+          </Button>
+          <span>Page {page} / {totalPages}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+          >
+            Next
+          </Button>
+        </div>
       </div>
 
       <Dialog open={isCreateThreadModalOpen || Boolean(editingThreadId)} onOpenChange={closeThreadModal}>

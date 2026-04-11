@@ -10,7 +10,7 @@ import {
 
 const router = express.Router();
 
-router.post('/', auth, requireRole('admin'), createBeneficiaryController);
+router.post('/', auth, requireRole('admin', 'member'), createBeneficiaryController);
 router.get('/', auth, requireRole('admin'), getAllBeneficiariesController);
 router.get('/:id', auth, requireRole('admin'), getBeneficiaryByIdController);
 router.put('/:id', auth, requireRole('admin'), updateBeneficiaryController);

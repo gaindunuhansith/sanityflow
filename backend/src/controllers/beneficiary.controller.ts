@@ -6,7 +6,11 @@ import type { IBeneficiary } from '../models/Beneficiary.js';
 export const createBeneficiaryController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = createBeneficiarySchema.parse(req.body);
-    const beneficiary = await createBeneficiary(data);
+    const beneficiary = await createBeneficiary({
+      ...data,
+      eligibilityStatus: req.user.role === 'member' ? 'Pending' : (data.eligibilityStatus ?? 'Active'),
+      submittedBy: req.user.userId,
+    });
     res.status(201).json(beneficiary);
   } catch (error) {
     next(error);
@@ -18,7 +22,7 @@ export const getAllBeneficiariesController = async (req: Request, res: Response,
     const { eligibilityStatus, search, page, limit } = req.query;
     const beneficiaries = await getAllBeneficiaries(
       {
-        ...(eligibilityStatus ? { eligibilityStatus: eligibilityStatus as 'Active' | 'Inactive' } : {}),
+        ...(eligibilityStatus ? { eligibilityStatus: eligibilityStatus as 'Pending' | 'Active' | 'Inactive' } : {}),
         ...(search ? { search: String(search) } : {}),
         ...(page ? { page: Number(page) } : {}),
         ...(limit ? { limit: Number(limit) } : {}),

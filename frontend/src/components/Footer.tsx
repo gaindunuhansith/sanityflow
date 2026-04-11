@@ -52,6 +52,9 @@ export function Footer() {
               <Link to="/help" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
                 Help Center
               </Link>
+              <Link to="/forum" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
+                Community Forum
+              </Link>
             </div>
           </div>
 

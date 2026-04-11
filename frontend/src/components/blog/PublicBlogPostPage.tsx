@@ -1,9 +1,10 @@
 import { Link, useParams } from "react-router-dom"
+import { BookmarkPlus, MessageCircle, PlayCircle, Share, Hand, Sparkles } from "lucide-react"
 
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/components/ui/button"
-import { useGetBlogByIdQuery } from "@/features/blog/blogApi"
+import { useGetBlogAiSummaryQuery, useGetBlogByIdQuery } from "@/features/blog/blogApi"
 
 export function PublicBlogPostPage() {
   const { id = "" } = useParams()
@@ -11,48 +12,126 @@ export function PublicBlogPostPage() {
   const { data: post, isLoading, isError, refetch } = useGetBlogByIdQuery(id, {
     skip: id.length === 0,
   })
+  const { data: aiSummaryResult, isLoading: isLoadingAiSummary } = useGetBlogAiSummaryQuery(post?._id ?? "", {
+    skip: !post?._id,
+  })
+
+  const readTime = Math.max(1, Math.ceil((post?.content?.length || 0) / 1000))
+  const defaultImage = "https://images.unsplash.com/photo-1542435503-956c224213d2?q=80&w=2670&auto=format&fit=crop"
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+    <div className="min-h-screen bg-white font-sans">
       <Header />
 
-      <main className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-2xl bg-white p-5 shadow-md">
-          <Button asChild variant="outline" className="rounded-lg">
-            <Link to="/blog">Back to Blog</Link>
+      <main className="mx-auto w-full max-w-[680px] px-4 py-12 sm:px-6">
+        <div className="mb-8">
+          <Button asChild variant="link" className="h-auto p-0 text-emerald-700 hover:text-emerald-800 font-medium">
+            <Link to="/blog">← Back to Blog</Link>
           </Button>
-        </section>
+        </div>
 
-        <section className="rounded-2xl bg-white p-6 shadow-md">
-          {isLoading && <p className="text-sm text-gray-600">Loading post...</p>}
+        <section className="flex flex-col">
+          {isLoading && <p className="text-sm text-gray-600 py-4">Loading original story...</p>}
 
           {isError && (
-            <p className="text-sm text-red-700">
-              Failed to load post.
-              <Button variant="link" className="h-auto p-0 pl-2 text-red-700" onClick={() => refetch()}>
+            <div className="py-4">
+              <p className="text-sm text-red-700 mb-2">Failed to load story.</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
                 Retry
               </Button>
-            </p>
+            </div>
           )}
 
           {!isLoading && !isError && post && (
             <article>
-              <h1 className="text-3xl font-bold text-gray-900">{post.title}</h1>
-              <p className="mt-2 text-sm text-gray-500">
-                {new Date(post.publishedAt || post.createdAt).toLocaleDateString()}
-              </p>
+              <h1 className="text-[42px] leading-[1.1] font-bold text-gray-900 tracking-tight sm:text-[46px] mb-6">
+                {post.title}
+              </h1>
+              
+              <div className="mb-8">
+                <div className="flex items-center space-x-1.5 text-[15px] font-semibold text-emerald-700 mb-2">
+                  <Sparkles className="h-4 w-4" />
+                  <span>AI Overview</span>
+                </div>
+                <h2 className="text-[20px] leading-[28px] text-gray-600 sm:text-[22px]">
+                  {isLoadingAiSummary
+                    ? "Generating AI overview..."
+                    : aiSummaryResult?.summary || post.summary || post.content.slice(0, 200).replace(/<[^>]*>?/gm, "").trim() + "..."}
+                </h2>
+              </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(post.tags ?? []).map((tag) => (
-                  <span key={tag} className="rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
-                    {tag}
-                  </span>
+              <div className="flex items-center space-x-4 mb-8">
+                <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200 overflow-hidden shrink-0">
+                  <span className="font-bold text-lg text-gray-800 font-serif">SF</span>
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2 mb-0.5">
+                    <span className="text-[15px] font-medium text-gray-900">SanityFlow Staff</span>
+                    <button className="text-[13px] text-emerald-700 font-medium hover:text-emerald-800">
+                      Follow
+                    </button>
+                  </div>
+                  <div className="flex items-center text-[13px] text-gray-500 space-x-1.5">
+                    <span>{readTime} min read</span>
+                    <span>·</span>
+                    <span>
+                      {new Date(post.publishedAt || post.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric"
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-y border-gray-100 py-3 mb-10 text-gray-500">
+                <div className="flex items-center space-x-6">
+                  <button className="flex items-center space-x-2 hover:text-gray-900 transition-colors">
+                    <Hand className="h-5 w-5" />
+                    <span className="text-[13px]">1.8K</span>
+                  </button>
+                  <button className="flex items-center space-x-2 hover:text-gray-900 transition-colors">
+                    <MessageCircle className="h-5 w-5" />
+                    <span className="text-[13px]">29</span>
+                  </button>
+                </div>
+                <div className="flex items-center space-x-5">
+                  <button className="hover:text-gray-900 transition-colors">
+                    <BookmarkPlus className="h-5 w-5 stroke-[1.5]" />
+                  </button>
+                  <button className="hover:text-gray-900 transition-colors">
+                    <PlayCircle className="h-5 w-5 stroke-[1.5]" />
+                  </button>
+                  <button className="hover:text-gray-900 transition-colors">
+                    <Share className="h-5 w-5 stroke-[1.5]" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-12 w-full bg-gray-50 aspect-video rounded-sm overflow-hidden">
+                <img 
+                  src={post.coverImage || defaultImage} 
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed font-serif prose-headings:font-sans prose-p:text-[20px] prose-p:leading-[32px]">
+                {post.content.split('\n\n').map((paragraph, index) => (
+                  <p key={index} className="mb-8">{paragraph}</p>
                 ))}
               </div>
 
-              {post.summary && <p className="mt-4 text-base text-gray-700">{post.summary}</p>}
-
-              <div className="mt-5 whitespace-pre-wrap text-sm leading-7 text-gray-800">{post.content}</div>
+              {post.tags && post.tags.length > 0 && (
+                <div className="mt-12 flex flex-wrap gap-2">
+                  {post.tags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-gray-100 px-4 py-2 text-[14px] text-gray-700">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </article>
           )}
         </section>

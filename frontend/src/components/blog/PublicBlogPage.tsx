@@ -6,7 +6,61 @@ import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { useGetBlogsQuery } from "@/features/blog/blogApi"
+import { type BlogPost, useGetBlogAiSummaryQuery, useGetBlogsQuery } from "@/features/blog/blogApi"
+
+function BlogListItem({ post }: { post: BlogPost }) {
+  const { data: aiSummaryResult, isLoading: isLoadingAiSummary } = useGetBlogAiSummaryQuery(post._id)
+  const readTime = Math.max(1, Math.ceil((post.content?.length || 0) / 1000))
+  const defaultImage = "https://images.unsplash.com/photo-1542435503-956c224213d2?q=80&w=2670&auto=format&fit=crop"
+  const fallbackSummary = post.summary || post.content.slice(0, 180).replace(/<[^>]*>?/gm, "").trim()
+  const aiOverview = aiSummaryResult?.summary || fallbackSummary
+
+  return (
+    <article className="py-8 border-b border-gray-100 last:border-0 last:pb-0">
+      <Link to={`/blog/${post._id}`} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-6 cursor-pointer">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-[22px] font-bold text-gray-900 leading-tight tracking-tight group-hover:text-gray-700 mb-3">
+            {post.title}
+          </h2>
+          <div className="mb-4 pr-4">
+            <div className="flex items-center space-x-1.5 text-xs font-semibold text-emerald-700 mb-1.5">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>AI Overview</span>
+            </div>
+            <p className="text-[15px] leading-[22px] text-gray-600 line-clamp-2">
+              {isLoadingAiSummary ? "Generating AI overview..." : aiOverview}
+            </p>
+          </div>
+          <div className="flex items-center text-[13px] text-gray-500 space-x-1.5">
+            <span>
+              {new Date(post.publishedAt || post.createdAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
+            <span>·</span>
+            <span>{readTime} min read</span>
+            {post.tags?.length > 0 && (
+              <>
+                <span>·</span>
+                <span className="bg-gray-100 px-2 py-0.5 rounded-full text-xs">
+                  {post.tags[0]}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="shrink-0 w-full sm:w-[160px] h-[160px] sm:h-[105px] overflow-hidden rounded">
+          <img
+            src={post.coverImage || defaultImage}
+            alt={post.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 bg-gray-50 border border-gray-100"
+          />
+        </div>
+      </Link>
+    </article>
+  )
+}
 
 export function PublicBlogPage() {
   const [search, setSearch] = useState("")
@@ -74,56 +128,7 @@ export function PublicBlogPage() {
 
           {!isLoading &&
             !isError &&
-            posts.map((post) => {
-              const readTime = Math.max(1, Math.ceil((post.content?.length || 0) / 1000))
-              const defaultImage = "https://images.unsplash.com/photo-1542435503-956c224213d2?q=80&w=2670&auto=format&fit=crop"
-
-              return (
-                <article key={post._id} className="py-8 border-b border-gray-100 last:border-0 last:pb-0">
-                  <Link to={`/blog/${post._id}`} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-6 cursor-pointer">
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-[22px] font-bold text-gray-900 leading-tight tracking-tight group-hover:text-gray-700 mb-3">
-                        {post.title}
-                      </h2>
-                      <div className="mb-4 pr-4">
-                        <div className="flex items-center space-x-1.5 text-xs font-semibold text-emerald-700 mb-1.5">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          <span>AI Overview</span>
-                        </div>
-                        <p className="text-[15px] leading-[22px] text-gray-600 line-clamp-2">
-                          {post.summary || post.content.slice(0, 180).replace(/<[^>]*>?/gm, "").trim()}
-                        </p>
-                      </div>
-                      <div className="flex items-center text-[13px] text-gray-500 space-x-1.5">
-                        <span>
-                          {new Date(post.publishedAt || post.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                        <span>·</span>
-                        <span>{readTime} min read</span>
-                        {post.tags?.length > 0 && (
-                          <>
-                            <span>·</span>
-                            <span className="bg-gray-100 px-2 py-0.5 rounded-full text-xs">
-                              {post.tags[0]}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="shrink-0 w-full sm:w-[160px] h-[160px] sm:h-[105px] overflow-hidden rounded">
-                      <img 
-                        src={post.coverImage || defaultImage} 
-                        alt={post.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 bg-gray-50 border border-gray-100"
-                      />
-                    </div>
-                  </Link>
-                </article>
-              )
-            })}
+            posts.map((post) => <BlogListItem key={post._id} post={post} />)}
 
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-4 pt-12">

@@ -32,6 +32,11 @@ export interface GetBlogsParams {
   search?: string
 }
 
+export interface BlogAiSummaryResponse {
+  summary: string
+  cached: boolean
+}
+
 export const blogApi = createApi({
   reducerPath: "blogApi",
   baseQuery: axiosBaseQuery(),
@@ -44,6 +49,9 @@ export const blogApi = createApi({
     getBlogById: builder.query<BlogPost, string>({
       query: (id) => ({ url: `/blog/${id}`, method: "GET" }),
       providesTags: ["Blog"],
+    }),
+    getBlogAiSummary: builder.query<BlogAiSummaryResponse, string>({
+      query: (id) => ({ url: `/ai/summarize/blog/${id}`, method: "GET" }),
     }),
     createBlog: builder.mutation<BlogPost, Partial<BlogPost>>({
       query: (data) => ({
@@ -74,6 +82,7 @@ export const blogApi = createApi({
 export const {
   useGetBlogsQuery,
   useGetBlogByIdQuery,
+  useGetBlogAiSummaryQuery,
   useCreateBlogMutation,
   useUpdateBlogMutation,
   useDeleteBlogMutation,

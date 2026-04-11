@@ -155,6 +155,47 @@ export function InventoryTransactionDashboard() {
     return filteredTransactions.slice(start, start + limit)
   }, [filteredTransactions, page, limit])
 
+  const transactionRows = (() => {
+    if (isLoading) {
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+            Loading transactions...
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    if (paginatedTransactions.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+            No transactions found.
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    return paginatedTransactions.map((transaction) => (
+      <TableRow key={transaction._id}>
+        <TableCell className="font-medium">{getProductLabel(transaction.product)}</TableCell>
+        <TableCell>
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${getTransactionTypeColor(transaction.type)}`}>
+            {transaction.type}
+          </span>
+        </TableCell>
+        <TableCell>
+          <span className="font-medium">{transaction.quantity}</span>
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground">{transaction.reason}</TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {new Date(transaction.date).toLocaleDateString()}
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground">{getUserLabel(transaction.user)}</TableCell>
+      </TableRow>
+    ))
+  })()
+
   useEffect(() => {
     if (page > totalPages) {
       dispatch(setTransactionPage(totalPages))
@@ -281,38 +322,7 @@ export function InventoryTransactionDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                    Loading transactions...
-                  </TableCell>
-                </TableRow>
-              ) : paginatedTransactions.length > 0 ? (
-                paginatedTransactions.map((transaction) => (
-                  <TableRow key={transaction._id}>
-                    <TableCell className="font-medium">{getProductLabel(transaction.product)}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${getTransactionTypeColor(transaction.type)}`}>
-                        {transaction.type}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">{transaction.quantity}</span>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{transaction.reason}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(transaction.date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{getUserLabel(transaction.user)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                    No transactions found.
-                  </TableCell>
-                </TableRow>
-              )}
+              {transactionRows}
             </TableBody>
           </Table>
         </div>

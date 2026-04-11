@@ -122,8 +122,10 @@ export function DriverDashboard() {
   } = useSelector((state: RootState) => state.driver)
 
   const queryParams = useMemo(() => {
+    const availabilityParam = availabilityFilter === "all" ? undefined : availabilityFilter
+
     return {
-      ...(availabilityFilter !== "all" ? { availability: availabilityFilter } : {}),
+      ...(availabilityParam ? { availability: availabilityParam } : {}),
       ...(searchText.trim().length > 0 ? { search: searchText.trim() } : {}),
       page: currentPage,
       limit: pageSize,
@@ -546,7 +548,7 @@ export function DriverDashboard() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-100">
-        <Table className="w-full min-w-[980px] text-left">
+        <Table className="w-full min-w-245 text-left">
           <TableHeader>
             <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
               <TableHead className="text-gray-500 font-semibold text-xs w-[34%] py-4 pl-4">Driver</TableHead>
@@ -698,7 +700,7 @@ export function DriverDashboard() {
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className="h-9 w-[92px] rounded-lg border-gray-200 bg-white">
+              <SelectTrigger className="h-9 w-23 rounded-lg border-gray-200 bg-white">
                 <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>

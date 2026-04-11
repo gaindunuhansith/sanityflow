@@ -27,10 +27,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useGetWaterTestsQuery, useCreateWaterTestMutation, useUpdateWaterTestMutation, useDeleteWaterTestMutation } from "@/features/water-tests/waterTestApi"
+import { useGetWaterTestsQuery, useCreateWaterTestMutation, useUpdateWaterTestMutation, useDeleteWaterTestMutation, type WaterTest } from "@/features/water-tests/waterTestApi"
 import { useGetWaterSourcesQuery } from "@/features/water-sources/waterSourceApi"
 import { toast } from "sonner"
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog"
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (!error || typeof error !== "object") {
+    return fallback
+  }
+
+  const maybeError = error as { data?: unknown; message?: unknown }
+
+  if (typeof maybeError.message === "string" && maybeError.message.trim().length > 0) {
+    return maybeError.message
+  }
+
+  if (maybeError.data && typeof maybeError.data === "object") {
+    const maybeData = maybeError.data as { message?: unknown }
+    if (typeof maybeData.message === "string" && maybeData.message.trim().length > 0) {
+      return maybeData.message
+    }
+  }
+
+  return fallback
+}
 
 const getSourceName = (waterSource: unknown) => {
   if (waterSource && typeof waterSource === "object" && "name" in waterSource) {
@@ -110,9 +131,9 @@ export function WaterTestDashboard() {
       refetch()
       setDeleteDialogOpen(false)
       setTestToDelete(null)
-    } catch (err: any) {
-      const errorMessage = err?.data?.message || err?.message || "Failed to delete water test"
-      console.error("Failed to delete water test:", err)
+    } catch (error) {
+      const errorMessage = getErrorMessage(error, "Failed to delete water test")
+      console.error("Failed to delete water test:", error)
       alert(`Error: ${errorMessage}`)
       setDeleteDialogOpen(false)
       setTestToDelete(null)
@@ -136,21 +157,21 @@ export function WaterTestDashboard() {
       return
     }
 
-    const pH = parseFloat(createPH)
-    const tds = parseInt(createTDS)
-    const turbidity = parseFloat(createTurbidity)
+    const pH = Number.parseFloat(createPH)
+    const tds = Number.parseInt(createTDS, 10)
+    const turbidity = Number.parseFloat(createTurbidity)
 
-    if (isNaN(pH) || pH < 0 || pH > 14) {
+    if (Number.isNaN(pH) || pH < 0 || pH > 14) {
       setCreateFormError('pH must be a number between 0 and 14')
       return
     }
 
-    if (isNaN(tds) || tds < 0) {
+    if (Number.isNaN(tds) || tds < 0) {
       setCreateFormError('TDS must be a positive number')
       return
     }
 
-    if (isNaN(turbidity) || turbidity < 0) {
+    if (Number.isNaN(turbidity) || turbidity < 0) {
       setCreateFormError('Turbidity must be a positive number')
       return
     }
@@ -175,8 +196,8 @@ export function WaterTestDashboard() {
       setIsCreateDialogOpen(false)
       refetch()
       toast.success("Water test created successfully")
-    } catch (err: any) {
-      const errorMessage = err?.data?.message || err?.message || 'Failed to create water test'
+    } catch (error) {
+      const errorMessage = getErrorMessage(error, 'Failed to create water test')
       setCreateFormError(errorMessage)
     }
   }
@@ -205,21 +226,21 @@ export function WaterTestDashboard() {
       return
     }
 
-    const pH = parseFloat(editPH)
-    const tds = parseInt(editTDS)
-    const turbidity = parseFloat(editTurbidity)
+    const pH = Number.parseFloat(editPH)
+    const tds = Number.parseInt(editTDS, 10)
+    const turbidity = Number.parseFloat(editTurbidity)
 
-    if (isNaN(pH) || pH < 0 || pH > 14) {
+    if (Number.isNaN(pH) || pH < 0 || pH > 14) {
       setEditFormError('pH must be a number between 0 and 14')
       return
     }
 
-    if (isNaN(tds) || tds < 0) {
+    if (Number.isNaN(tds) || tds < 0) {
       setEditFormError('TDS must be a positive number')
       return
     }
 
-    if (isNaN(turbidity) || turbidity < 0) {
+    if (Number.isNaN(turbidity) || turbidity < 0) {
       setEditFormError('Turbidity must be a positive number')
       return
     }
@@ -245,13 +266,13 @@ export function WaterTestDashboard() {
       closeEditDialog()
       refetch()
       toast.success("Water test updated successfully")
-    } catch (err: any) {
-      const errorMessage = err?.data?.message || err?.message || 'Failed to update water test'
+    } catch (error) {
+      const errorMessage = getErrorMessage(error, 'Failed to update water test')
       setEditFormError(errorMessage)
     }
   }
 
-  const handleEdit = (test: any) => {
+  const handleEdit = (test: WaterTest) => {
     openEditDialog(test._id)
   }
 
@@ -336,7 +357,7 @@ export function WaterTestDashboard() {
                    </div>
                 </TableCell>
                 <TableCell className="py-4">
-                  {test.temperature !== undefined ? (
+                  {typeof test.temperature === "number" ? (
                     <div className="flex flex-col gap-1 text-sm">
                       <div className="flex items-center gap-1 text-gray-600">
                         <Thermometer className="h-3 w-3" />
@@ -407,7 +428,7 @@ export function WaterTestDashboard() {
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-150">
           <DialogHeader>
             <DialogTitle>Log New Water Quality Test</DialogTitle>
             <DialogDescription>
@@ -519,7 +540,7 @@ export function WaterTestDashboard() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingTestId} onOpenChange={(open) => !open && closeEditDialog()}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-175">
           <DialogHeader>
             <DialogTitle>Edit Water Quality Test</DialogTitle>
             <DialogDescription>
@@ -529,7 +550,7 @@ export function WaterTestDashboard() {
           <div className="space-y-4">
             {editingTestId && (() => {
               const test = tests.find(t => t._id === editingTestId)
-              return test && test.temperature !== undefined ? (
+              return typeof test?.temperature === "number" ? (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
                     <Cloud className="h-4 w-4" />

@@ -193,7 +193,6 @@ The system uses [Resend](https://resend.com) to send automated email notificatio
 | Trigger | Recipient | Description |
 |---------|-----------|-------------|
 | Driver assigned to a distribution order | Driver's email | Notifies the driver with order ID and delivery location |
-| Delivery status updated by driver | Admin email | Notifies admin with updated status and optional notes |
 | Resource quantity falls below reorder level | Admin email (`ALERT_EMAIL`) | Low stock alert with resource details and supplier info |
 
 **Environment variables required:**

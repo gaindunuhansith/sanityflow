@@ -55,7 +55,7 @@ export function HomePage() {
       icon: <FileText className="h-8 w-8 text-emerald-600" />,
       title: "Blog & Updates",
       description: "Stay informed with the latest news, updates, and educational content about water management.",
-      link: "/dashboard/blog"
+      link: "/blog"
     }
   ];
 

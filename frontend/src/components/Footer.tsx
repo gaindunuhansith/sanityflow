@@ -55,6 +55,9 @@ export function Footer() {
               <Link to="/forum" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
                 Community Forum
               </Link>
+              <Link to="/blog" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
+                Blog & Updates
+              </Link>
             </div>
           </div>
 

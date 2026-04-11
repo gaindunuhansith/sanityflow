@@ -34,18 +34,18 @@ import {
 } from "@/components/ui/sidebar";
 
 export const mainMenu = [
-  { name: "Dashboard", href: "/", icon: Home, roles: ['admin', 'member', 'driver'] },
-  { name: "Blog", href: "/blog", icon: Feather, roles: ['admin', 'member'] },
-  { name: "Forum", href: "/forum", icon: MessageSquare, roles: ['admin', 'member'] },
-  { name: "Issues", href: "/issues", icon: AlertTriangle, roles: ['admin', 'member'] },
-  { name: "Beneficiary", href: "/beneficiaries", icon: Users, roles: ['admin', 'member'] },
-  { name: "Drivers", href: "/drivers", icon: Users, roles: ['admin', 'member'] },
-  { name: "Distribution", href: "/distributions", icon: Truck, roles: ['admin', 'member', 'driver'] },
-  { name: "Resources", href: "/resources", icon: Boxes, roles: ['admin', 'member'] },
-  { name: "Supplier", href: "/suppliers", icon: Store, roles: ['admin', 'member'] },
-  { name: "Inventory Transactions", href: "/inventory-transactions", icon: Package, roles: ['admin', 'member'] },
-  { name: "Water Source", href: "/water-sources", icon: Droplet, roles: ['admin', 'member'] },
-  { name: "Water Quality", href: "/water-tests", icon: ShieldCheck, roles: ['admin', 'member'] },
+  { name: "Dashboard", href: "/dashboard", icon: Home, roles: ['admin', 'member', 'driver'] },
+  { name: "Blog", href: "/dashboard/blog", icon: Feather, roles: ['admin', 'member'] },
+  { name: "Forum", href: "/dashboard/forum", icon: MessageSquare, roles: ['admin', 'member'] },
+  { name: "Issues", href: "/dashboard/issues", icon: AlertTriangle, roles: ['admin', 'member'] },
+  { name: "Beneficiary", href: "/dashboard/beneficiaries", icon: Users, roles: ['admin', 'member'] },
+  { name: "Drivers", href: "/dashboard/drivers", icon: Users, roles: ['admin', 'member'] },
+  { name: "Distribution", href: "/dashboard/distributions", icon: Truck, roles: ['admin', 'member', 'driver'] },
+  { name: "Resources", href: "/dashboard/resources", icon: Boxes, roles: ['admin', 'member'] },
+  { name: "Supplier", href: "/dashboard/suppliers", icon: Store, roles: ['admin', 'member'] },
+  { name: "Inventory Transactions", href: "/dashboard/inventory-transactions", icon: Package, roles: ['admin', 'member'] },
+  { name: "Water Source", href: "/dashboard/water-sources", icon: Droplet, roles: ['admin', 'member'] },
+  { name: "Water Quality", href: "/dashboard/water-tests", icon: ShieldCheck, roles: ['admin', 'member'] },
 ];
 
 export function Sidebar() {
@@ -82,7 +82,9 @@ export function Sidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
               {mainMenu.filter((item) => item.roles.includes(authUser?.role ?? 'member')).map((item) => {
-                const isActive = location.pathname === item.href || (location.pathname.startsWith(item.href) && item.href !== '/');
+                const isActive = item.href === "/dashboard"
+                  ? location.pathname === "/dashboard"
+                  : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton

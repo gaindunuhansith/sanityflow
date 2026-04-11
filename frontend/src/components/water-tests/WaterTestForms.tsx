@@ -70,7 +70,7 @@ export function CreateWaterTestForm() {
         notes: formData.notes || undefined,
       }).unwrap()
 
-      navigate("/water-tests")
+      navigate("/dashboard/water-tests")
     } catch (err) {
       console.error("Failed to create water test", err)
       setErrorMessage("Failed to create water test. Check your inputs and try again.")
@@ -186,7 +186,7 @@ export function CreateWaterTestForm() {
 
         <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-100 mt-6">
           <Button variant="ghost" className="h-11 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 asChild">
-            <Link to="/water-tests">Cancel</Link>
+            <Link to="/dashboard/water-tests">Cancel</Link>
           </Button>
           <Button
             disabled={isLoading || !canSubmit}
@@ -249,7 +249,7 @@ export function UpdateWaterTestForm() {
         },
       }).unwrap()
 
-      navigate("/water-tests")
+      navigate("/dashboard/water-tests")
     } catch (err) {
       console.error("Failed to update water test", err)
       setErrorMessage("Failed to update water test. Please try again.")
@@ -368,7 +368,7 @@ export function UpdateWaterTestForm() {
 
         <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-100 mt-6">
           <Button variant="ghost" className="h-11 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 asChild">
-            <Link to="/water-tests">Cancel</Link>
+            <Link to="/dashboard/water-tests">Cancel</Link>
           </Button>
           <Button
             disabled={isUpdating}

@@ -36,7 +36,7 @@ export function CreateWaterSourceForm() {
         condition: "Good",
         isActive: true
       }).unwrap()
-      navigate("/water-sources")
+      navigate("/dashboard/water-sources")
     } catch (err) {
       console.error("Failed to create water source", err)
     }
@@ -121,7 +121,7 @@ export function CreateWaterSourceForm() {
 
         <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-100">
           <Button type="button" variant="ghost" className="h-11 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 asChild">
-            <Link to="/water-sources">Cancel</Link>
+            <Link to="/dashboard/water-sources">Cancel</Link>
           </Button>
           <Button 
             disabled={isLoading}
@@ -170,7 +170,7 @@ export function UpdateWaterSourceForm() {
           condition: formData.condition
         }
       }).unwrap()
-      navigate("/water-sources")
+      navigate("/dashboard/water-sources")
     } catch (err) {
       console.error("Failed to update water source status", err)
     }
@@ -217,7 +217,7 @@ export function UpdateWaterSourceForm() {
 
         <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-100 mt-6">
           <Button type="button" variant="ghost" className="h-11 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 asChild">
-             <Link to="/water-sources">Cancel</Link>
+             <Link to="/dashboard/water-sources">Cancel</Link>
           </Button>
           <Button 
             disabled={isUpdating}

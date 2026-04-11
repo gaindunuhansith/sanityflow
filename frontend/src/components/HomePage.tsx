@@ -49,7 +49,7 @@ export function HomePage() {
       icon: <Users className="h-8 w-8 text-emerald-600" />,
       title: "Community Forum",
       description: "Connect with community members, share updates, and discuss water-related topics.",
-      link: "/dashboard/forum"
+      link: "/forum"
     },
     {
       icon: <FileText className="h-8 w-8 text-emerald-600" />,

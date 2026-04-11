@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -185,8 +186,8 @@ export function ContactPage() {
                 <p className="text-gray-600 mb-4">
                   Connect with other users and share experiences in our community forum.
                 </p>
-                <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-                  Visit Forum
+                <Button asChild variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+                  <Link to="/forum">Visit Forum</Link>
                 </Button>
               </CardContent>
             </Card>

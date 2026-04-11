@@ -76,6 +76,16 @@ export function Header() {
               Help Center
             </Link>
             <Link
+              to="/forum"
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                isActive("/forum")
+                  ? "text-emerald-600 bg-emerald-50 rounded-md"
+                  : "text-gray-700 hover:text-emerald-600"
+              }`}
+            >
+              Forum
+            </Link>
+            <Link
               to="/contact"
               className={`px-3 py-2 text-sm font-medium transition-colors ${
                 isActive("/contact")

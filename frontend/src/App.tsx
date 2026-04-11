@@ -11,6 +11,8 @@ import { PrivacyPolicyPage } from "./components/PrivacyPolicyPage";
 import { FeaturesPage } from "./components/FeaturesPage";
 import { AboutPage } from "./components/AboutPage";
 import { ForumDashboard } from "./components/forum/ForumDashboard";
+import { PublicForumPage } from "./components/forum/PublicForumPage";
+import { PublicForumThreadPage } from "./components/forum/PublicForumThreadPage";
 import { IssueDashboard } from "./components/Issues/IssueDashboard";
 import { WaterSourceDashboard } from "./components/water-sources/WaterSourceDashboard";
 import { WaterTestDashboard } from "./components/water-tests/WaterTestDashboard";
@@ -52,6 +54,14 @@ const router = createBrowserRouter([
   {
     path: "/about",
     element: <AboutPage />
+  },
+  {
+    path: "/forum",
+    element: <PublicForumPage />
+  },
+  {
+    path: "/forum/:threadId",
+    element: <PublicForumThreadPage />
   },
   {
     path: "/login",

@@ -130,27 +130,61 @@ Base URL: `http://localhost:3000/api/v1`
 | GET    | `/inventory-transactions/:id` | Yes  | Get transaction by ID    |
 | POST   | `/inventory-transactions`     | Yes  | Create a transaction     |
 
-## Barcode
+---
+
+## Third-Party Integrations
+
+### Barcode Lookup
 
 | Method | Endpoint             | Auth | Description            |
 |--------|----------------------|------|------------------------|
 | GET    | `/barcode/:barcode`  | Yes  | Lookup barcode info    |
 
-## AI
+Uses a multi-API fallback chain to resolve product information from a barcode:
+
+| Priority | External API | Description |
+|----------|-------------|-------------|
+| 1st | [BarcodeLookup API](https://www.barcodelookup.com) | General product lookup (requires `BARCODE_API_KEY`) |
+| 2nd | [Open Food Facts API](https://world.openfoodfacts.org) | Food product database (free, no key required) |
+| 3rd | [Open Beauty Facts API](https://world.openbeautyfacts.org) | Sanitary & personal care products (free, no key required) |
+| 4th | SanityFlow Local Catalog | Internal fallback for known sanitary stock items |
+
+**Environment variables (optional):**
+```env
+BARCODE_API_KEY=<your_barcodelookup_api_key>
+```
+
+---
+
+### AI Summarization (Groq API)
 
 | Method | Endpoint                     | Auth | Description                |
 |--------|------------------------------|------|----------------------------|
 | GET    | `/ai/summarize/blog/:id`     | No   | Summarize a blog post      |
 
-## Weather
+Uses [Groq](https://groq.com) with the `llama-3.3-70b-versatile` model to generate concise blog post summaries. Results are cached in-memory to avoid repeated API calls.
+
+**Environment variables required:**
+```env
+GROQ_API_KEY=<your_groq_api_key>
+```
+
+---
+
+### Weather (OpenWeather API)
 
 | Method | Endpoint                | Auth | Description                    |
 |--------|-------------------------|------|--------------------------------|
 | GET    | `/weather/:location`    | Yes  | Get weather for a location     |
 
----
+Uses [OpenWeatherMap](https://openweathermap.org/api) to fetch current weather data. Automatically flags high-risk conditions (thunderstorm, heavy rainfall >10mm/h, tornado, etc.).
 
-## Third-Party Integrations
+**Environment variables required:**
+```env
+OPENWEATHER_API_KEY=<your_openweather_api_key>
+```
+
+---
 
 ### Email Notifications (Resend API)
 
@@ -159,6 +193,7 @@ The system uses [Resend](https://resend.com) to send automated email notificatio
 | Trigger | Recipient | Description |
 |---------|-----------|-------------|
 | Driver assigned to a distribution order | Driver's email | Notifies the driver with order ID and delivery location |
+| Delivery status updated by driver | Admin email | Notifies admin with updated status and optional notes |
 | Resource quantity falls below reorder level | Admin email (`ALERT_EMAIL`) | Low stock alert with resource details and supplier info |
 
 **Environment variables required:**

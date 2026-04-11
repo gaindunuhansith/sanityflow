@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { Search, SlidersHorizontal, ChevronRight, ChevronsUpDown, Truck, UserPlus, RefreshCw, Trash2, Plus, Users } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
@@ -146,6 +146,9 @@ const getApiErrorMessage = (error: unknown) => {
   return "Request failed. Please try again."
 }
 
+type DeliveryStatusValue = Extract<DistributionOrderStatus, "In Transit" | "Delivered" | "Failed">
+const DELIVERY_STATUS_VALUES = new Set<DeliveryStatusValue>(["In Transit", "Delivered", "Failed"])
+
 export function DistributionDashboard() {
   const dispatch = useDispatch<AppDispatch>()
   const currentUser = useSelector((state: RootState) => state.auth.user)
@@ -164,7 +167,7 @@ export function DistributionDashboard() {
   const [updateBeneficiaryIds, setUpdateBeneficiaryIds] = useState<string[]>([])
   const [beneficiaryLabelsOverrideByOrder, setBeneficiaryLabelsOverrideByOrder] = useState<Record<string, string[]>>({})
   const [updateBeneficiariesError, setUpdateBeneficiariesError] = useState("")
-  const [statusValue, setStatusValue] = useState<"In Transit" | "Delivered" | "Failed">("In Transit")
+  const [statusValue, setStatusValue] = useState<DeliveryStatusValue>("In Transit")
   const [statusError, setStatusError] = useState("")
   const [deleteError, setDeleteError] = useState("")
   const {
@@ -180,15 +183,41 @@ export function DistributionDashboard() {
   const [beneficiaryFilter, setBeneficiaryFilter] = useState("all")
 
   const queryParams = useMemo(() => {
-    return {
-      ...(statusFilter !== "all" ? { status: statusFilter } : {}),
-      ...(isDriver ? { driver: currentUser?.id } : driverFilter !== "all" ? { driver: driverFilter } : {}),
-      ...(beneficiaryFilter !== "all" ? { beneficiary: beneficiaryFilter } : {}),
-      ...(searchText.trim().length > 0 ? { search: searchText.trim() } : {}),
+    const params: {
+      status?: DistributionOrderStatus
+      driver?: string
+      beneficiary?: string
+      search?: string
+      page: number
+      limit: number
+    } = {
       page: currentPage,
       limit: pageSize,
     }
-  }, [statusFilter, driverFilter, beneficiaryFilter, searchText, currentPage, pageSize])
+
+    if (statusFilter !== "all") {
+      params.status = statusFilter
+    }
+
+    if (isDriver) {
+      if (currentUser?.id) {
+        params.driver = currentUser.id
+      }
+    } else if (driverFilter !== "all") {
+      params.driver = driverFilter
+    }
+
+    if (beneficiaryFilter !== "all") {
+      params.beneficiary = beneficiaryFilter
+    }
+
+    const trimmedSearch = searchText.trim()
+    if (trimmedSearch.length > 0) {
+      params.search = trimmedSearch
+    }
+
+    return params
+  }, [statusFilter, driverFilter, beneficiaryFilter, searchText, currentPage, pageSize, isDriver, currentUser])
 
   const {
     data: ordersResponse,
@@ -197,7 +226,7 @@ export function DistributionDashboard() {
     refetch,
   } = useGetDistributionOrdersQuery(queryParams)
 
-  const orders = ordersResponse?.items ?? []
+  const orders = useMemo(() => ordersResponse?.items ?? [], [ordersResponse?.items])
   const totalOrders = ordersResponse?.total ?? 0
   const totalPages = ordersResponse?.totalPages ?? 1
 
@@ -218,12 +247,6 @@ export function DistributionDashboard() {
       beneficiaries.map((beneficiary) => [beneficiary._id, `${beneficiary.name} (${beneficiary.location})`])
     )
   }, [beneficiaries])
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
-  }, [currentPage, totalPages])
 
   const availableDrivers = useMemo(() => {
     return drivers
@@ -459,9 +482,8 @@ export function DistributionDashboard() {
   }
 
   const openStatusDialog = (order: DistributionOrder) => {
-    const allowedStatuses: Array<"In Transit" | "Delivered" | "Failed"> = ["In Transit", "Delivered", "Failed"]
-    if (allowedStatuses.includes(order.status as "In Transit" | "Delivered" | "Failed")) {
-      setStatusValue(order.status as "In Transit" | "Delivered" | "Failed")
+    if (DELIVERY_STATUS_VALUES.has(order.status as DeliveryStatusValue)) {
+      setStatusValue(order.status as DeliveryStatusValue)
     } else {
       setStatusValue("In Transit")
     }
@@ -758,7 +780,7 @@ export function DistributionDashboard() {
 
           <div className="space-y-3">
             <Label htmlFor="update-status">Status</Label>
-            <Select value={statusValue} onValueChange={(value) => setStatusValue(value as "In Transit" | "Delivered" | "Failed")}>
+            <Select value={statusValue} onValueChange={(value) => setStatusValue(value as DeliveryStatusValue)}>
               <SelectTrigger id="update-status" className="w-full">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -907,7 +929,7 @@ export function DistributionDashboard() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-100">
-        <Table className="w-full min-w-[980px] text-left">
+        <Table className="w-full min-w-245 text-left">
           <TableHeader>
             <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
               <TableHead className="text-gray-500 font-semibold text-xs w-[38%] py-4 pl-4">Order</TableHead>
@@ -1119,7 +1141,7 @@ export function DistributionDashboard() {
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className="h-9 w-[92px] rounded-lg border-gray-200 bg-white">
+              <SelectTrigger className="h-9 w-23 rounded-lg border-gray-200 bg-white">
                 <SelectValue placeholder="10" />
               </SelectTrigger>
               <SelectContent>

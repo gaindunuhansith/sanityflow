@@ -92,6 +92,144 @@ export function IssueDashboard() {
     return matchesSearch && matchesCategory && matchesPriority
   })
 
+  const getPriorityBadgeClass = (priority: "Low" | "Medium" | "High") => {
+    if (priority === "High") {
+      return "bg-red-50 text-red-600"
+    }
+
+    if (priority === "Medium") {
+      return "bg-amber-50 text-amber-600"
+    }
+
+    return "bg-blue-50 text-blue-600"
+  }
+
+  const getStatusBadgeClass = (status: "Pending" | "In Progress" | "Resolved") => {
+    if (status === "Resolved") {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200"
+    }
+
+    if (status === "In Progress") {
+      return "bg-amber-50 text-amber-700 border-amber-200"
+    }
+
+    return "bg-gray-50 text-gray-700 border-gray-200"
+  }
+
+  let tableContent: React.ReactNode
+
+  if (isLoading) {
+    tableContent = <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#0F392B]" /></div>
+  } else if (error) {
+    tableContent = <div className="text-red-500 text-center p-8">Failed to load issues</div>
+  } else if (issues.length === 0) {
+    tableContent = <div className="text-gray-500 text-center p-8">No issues found</div>
+  } else {
+    tableContent = (
+      <Table className="w-full text-left">
+        <TableHeader>
+          <TableRow className="border-b border-gray-100 hover:bg-transparent">
+            <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Issue</TableHead>
+            <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Reporter</TableHead>
+            <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Category</TableHead>
+            <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Priority</TableHead>
+            <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Status</TableHead>
+            <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {issues.map((issue) => (
+            <React.Fragment key={issue._id}>
+              <TableRow className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors" onClick={() => toggleExpand(issue._id)}>
+                <TableCell className="py-4 px-4">
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-900">{issue.description.length > 50 ? `${issue.description.substring(0, 50)}...` : issue.description}</span>
+                    <span className="text-xs text-gray-500 mt-0.5">{issue.createdAt && format(new Date(issue.createdAt), 'MMM dd, yyyy HH:mm')}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="py-4 px-4">
+                  <span className="text-sm text-gray-700 font-medium">{issue.reporter?.name || "Unknown"}</span>
+                </TableCell>
+                <TableCell className="py-4 px-4">
+                  <div className="flex items-center gap-2">
+                    {getCategoryIcon(issue.issueType)}
+                    <span className="text-sm text-gray-700 capitalize">{issue.issueType}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="py-4 px-4">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold capitalize ${getPriorityBadgeClass(issue.priority)}`}>
+                    {issue.priority}
+                  </span>
+                </TableCell>
+                <TableCell className="py-4 px-4">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold capitalize border ${getStatusBadgeClass(issue.status)}`}>
+                    {issue.status}
+                  </span>
+                </TableCell>
+                <TableCell className="py-4 px-4 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        openEditDialog(issue._id)
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void handleDelete(issue._id)
+                      }}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        toggleExpand(issue._id)
+                      }}
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedIssues.has(issue._id) ? "rotate-180" : ""}`} />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+              {expandedIssues.has(issue._id) && (
+                <TableRow className="bg-gray-50/50">
+                  <TableCell colSpan={6} className="py-4 px-6 border-b border-gray-100">
+                    <div className="flex flex-col gap-4">
+                      <p className="text-sm text-gray-700">{issue.description}</p>
+                      {issue.location && (
+                        <p className="text-sm text-gray-600"><span className="font-semibold">Location:</span> {issue.location}</p>
+                      )}
+                      {issue.resolutionNotes && (
+                        <div className="bg-white p-4 rounded-xl border border-gray-100">
+                          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Resolution Notes</p>
+                          <p className="text-sm text-gray-800">{issue.resolutionNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </React.Fragment>
+          ))}
+        </TableBody>
+      </Table>
+    )
+  }
+
   const toggleExpand = (id: string) => {
     setExpandedIssues(prev => {
       const next = new Set(prev)
@@ -281,104 +419,7 @@ export function IssueDashboard() {
 
       {/* Table */}
       <div className="overflow-hidden">
-        {isLoading ? (
-          <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#0F392B]" /></div>
-        ) : error ? (
-          <div className="text-red-500 text-center p-8">Failed to load issues</div>
-        ) : issues.length === 0 ? (
-          <div className="text-gray-500 text-center p-8">No issues found</div>
-        ) : (
-          <Table className="w-full text-left">
-            <TableHeader>
-              <TableRow className="border-b border-gray-100 hover:bg-transparent">
-                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Issue</TableHead>
-                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Reporter</TableHead>
-                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Category</TableHead>
-                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Priority</TableHead>
-                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm">Status</TableHead>
-                <TableHead className="py-4 px-4 font-semibold text-gray-500 text-sm text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {issues.map((issue) => (
-                <React.Fragment key={issue._id}>
-                  <TableRow className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors" onClick={() => toggleExpand(issue._id)}>
-                    <TableCell className="py-4 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-gray-900">{issue.description.length > 50 ? `${issue.description.substring(0, 50)}...` : issue.description}</span>
-                        <span className="text-xs text-gray-500 mt-0.5">{issue.createdAt && format(new Date(issue.createdAt), 'MMM dd, yyyy HH:mm')}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 px-4">
-                      <span className="text-sm text-gray-700 font-medium">{issue.reporter?.name || "Unknown"}</span>
-                    </TableCell>
-                    <TableCell className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        {getCategoryIcon(issue.issueType)}
-                        <span className="text-sm text-gray-700 capitalize">{issue.issueType}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold capitalize
-                        ${issue.priority === "High" ? "bg-red-50 text-red-600" :
-                          issue.priority === "Medium" ? "bg-amber-50 text-amber-600" :
-                          "bg-blue-50 text-blue-600"}
-                      `}>
-                        {issue.priority}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-4 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold capitalize border
-                        ${issue.status === "Resolved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                          issue.status === "In Progress" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                          "bg-gray-50 text-gray-700 border-gray-200"}
-                      `}>
-                        {issue.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50" onClick={() => openEditDialog(issue._id)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => handleDelete(issue._id)}
-                          disabled={isDeleting}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400" onClick={() => toggleExpand(issue._id)}>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${expandedIssues.has(issue._id) ? "rotate-180" : ""}`} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  {expandedIssues.has(issue._id) && (
-                    <TableRow className="bg-gray-50/50">
-                      <TableCell colSpan={6} className="py-4 px-6 border-b border-gray-100">
-                        <div className="flex flex-col gap-4">
-                          <p className="text-sm text-gray-700">{issue.description}</p>
-                          {issue.location && (
-                            <p className="text-sm text-gray-600"><span className="font-semibold">Location:</span> {issue.location}</p>
-                          )}
-                          {issue.resolutionNotes && (
-                            <div className="bg-white p-4 rounded-xl border border-gray-100">
-                              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Resolution Notes</p>
-                              <p className="text-sm text-gray-800">{issue.resolutionNotes}</p>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        {tableContent}
       </div>
 
       {/* Create Issue Dialog */}
@@ -468,7 +509,13 @@ export function IssueDashboard() {
       </Dialog>
 
       {/* Edit Issue Dialog */}
-      <Dialog open={!!editingIssueId} onOpenChange={(isOpen) => (!isOpen ? closeEditDialog() : undefined)}>
+      <Dialog open={!!editingIssueId} onOpenChange={(isOpen) => {
+        if (isOpen) {
+          return
+        }
+
+        closeEditDialog()
+      }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Update Issue</DialogTitle>

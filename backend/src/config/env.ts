@@ -10,7 +10,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
-    PORT: z.coerce.number().positive().default(5000),
+    PORT: z.coerce.number().positive().default(3000),
     MONGODB_URI: z.url(),
     JWT_SECRET: z.string().min(32),
 

@@ -1,0 +1,14 @@
+config:
+  target: "TARGET_PLACEHOLDER"
+  phases:
+    - duration: DURATION_PLACEHOLDER
+      arrivalRate: RATE_PLACEHOLDER
+  defaults:
+    headers:
+      Accept: "application/json"
+
+scenarios:
+  - name: "Simple GET root"
+    flow:
+      - get:
+          url: "/"

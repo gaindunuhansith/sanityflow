@@ -1,5 +1,5 @@
 ﻿import React, { useMemo, useState } from "react"
-import { Search, ChevronRight, Pencil, Trash2, ChevronsUpDown, MessageSquareReply, Plus } from "lucide-react"
+import { Search, ChevronRight, Pencil, Trash2, ChevronsUpDown, Plus } from "lucide-react"
 
 import {
   clearReplyDraft,
@@ -248,8 +248,8 @@ export function ForumDashboard() {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-gray-900">Recent Threads</h1>
+        <h1 className="text-xl font-bold text-gray-900">Recent Threads</h1>
+        <div className="flex items-center gap-3">
           <Button
             className="h-10 rounded-xl bg-[#0F392B] hover:bg-[#0F392B]/90 text-white px-4 font-medium"
             onClick={openCreateThread}
@@ -612,83 +612,86 @@ function ThreadRepliesPanel({
   const replies = repliesResult?.replies ?? []
 
   return (
-    <div className="bg-emerald-50/20 border-t border-emerald-100/50">
-      <div className="px-10 py-6">
-        <div className="mb-4 flex items-center gap-2">
-          <MessageSquareReply className="h-4 w-4 text-emerald-700" />
-          <h3 className="text-sm font-semibold text-gray-900">
-            Thread Replies ({thread.replyCount})
-          </h3>
-        </div>
-
+    <div className="border-t border-gray-100 bg-white">
+      <div className="px-4 py-4 md:px-6">
         {isLoading && (
-          <div className="rounded-xl border border-gray-100 bg-white p-6 text-center text-sm text-gray-500">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 text-center text-sm text-gray-500">
             Loading replies...
           </div>
         )}
 
         {!isLoading && isError && (
-          <div className="rounded-xl border border-red-100 bg-red-50 p-6 text-center text-sm text-red-500">
+          <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-center text-sm text-red-500">
             Unable to load replies for this thread.
           </div>
         )}
 
         {!isLoading && !isError && replies.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-100 bg-gray-50 p-6 text-center">
+          <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-center">
             <p className="text-sm text-gray-500">No replies yet for this thread.</p>
           </div>
         )}
 
         {!isLoading && !isError && replies.length > 0 && (
-          <div className="space-y-4">
-            {replies.map((reply) => {
-              const date = new Date(reply.createdAt)
-              const formattedDate = date.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })
-              const formattedTime = date.toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })
+          <div className="overflow-x-auto rounded-xl border border-gray-100">
+            <Table className="w-full text-left">
+              <TableHeader>
+                <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
+                  <TableHead className="text-gray-500 font-semibold text-xs py-2.5 pl-3 w-[55%]">Reply</TableHead>
+                  <TableHead className="text-gray-500 font-semibold text-xs py-2.5 w-34">Author</TableHead>
+                  <TableHead className="text-gray-500 font-semibold text-xs py-2.5 pr-3 text-right w-40">Posted</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {replies.map((reply) => {
+                  const date = new Date(reply.createdAt)
+                  const formattedDate = date.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                  const formattedTime = date.toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
 
-              return (
-                <div
-                  key={reply._id}
-                  className="relative ml-2 rounded-xl border border-gray-100 border-l-[3px] border-l-emerald-600 bg-white p-4 pl-4 shadow-sm before:absolute before:-left-4 before:top-6 before:h-px before:w-4 before:bg-gray-200"
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-gray-900">
-                      {reply.author?.name ?? "Unknown"}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {formattedDate} at {formattedTime}
-                    </span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-gray-600">
-                    {reply.content}
-                  </p>
-                </div>
-              )
-            })}
+                  return (
+                    <TableRow key={reply._id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                      <TableCell className="pl-3 py-2.5 text-sm text-gray-700 whitespace-normal wrap-break-word">
+                        {reply.content}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-sm font-medium text-gray-700">
+                        {reply.author?.name ?? "Unknown"}
+                      </TableCell>
+                      <TableCell className="py-2.5 pr-3 text-xs text-gray-500 text-right whitespace-nowrap">
+                        {formattedDate} at {formattedTime}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
 
-        <div className="mt-4 ml-2 flex gap-3">
-          <Input
-            placeholder="Type your reply..."
-            value={draftValue}
-            onChange={(event) => onDraftChange(event.target.value)}
-            className="border-gray-200 bg-white focus-visible:ring-emerald-500"
-          />
-          <Button
-            className="shrink-0 bg-[#0F392B] text-white hover:bg-[#0F392B]/90"
-            disabled={!draftValue.trim() || isSubmittingReply}
-            onClick={onSubmit}
-          >
-            {isSubmittingReply ? "Sending..." : "Reply"}
-          </Button>
+        <div className="mt-3 flex items-center gap-2">
+          <div className="flex-1">
+            <Input
+              id={`reply-input-${thread._id}`}
+              placeholder="Write a reply..."
+              value={draftValue}
+              onChange={(event) => onDraftChange(event.target.value)}
+              className="h-9 border-gray-200 bg-white focus-visible:ring-emerald-500"
+            />
+          </div>
+            <Button
+              className="h-9 shrink-0 bg-[#0F392B] px-4 text-white hover:bg-[#0F392B]/90"
+              disabled={!draftValue.trim() || isSubmittingReply}
+              onClick={onSubmit}
+            >
+              {isSubmittingReply ? "Sending..." : "Post Reply"}
+            </Button>
         </div>
       </div>
     </div>

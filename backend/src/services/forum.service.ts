@@ -2,6 +2,7 @@ import ForumThread from '../models/ForumThread.js';
 import ForumReply from '../models/ForumReply.js';
 import type { IForumThread } from '../models/ForumThread.js';
 import type { IForumReply } from '../models/ForumReply.js';
+import type { UserRole } from '../types/index.js';
 import { AppError } from '../utils/errorHandler.js';
 import { HTTP_STATUS } from '../constants/index.js';
 import type { CreateThreadData, UpdateThreadData, CreateReplyData, GetThreadsQuery } from '../validations/forum.schemas.js';
@@ -63,10 +64,25 @@ export const updateThreadService = async (
   id: string,
   data: UpdateThreadData,
   userId: string,
+  role: UserRole,
 ): Promise<IForumThread> => {
   const thread = await ForumThread.findById(id);
   if (!thread) throw new AppError(HTTP_STATUS.NOT_FOUND, 'Thread not found');
-  if (thread.author.toString() !== userId) {
+
+  if (role === 'admin') {
+    const hasNonStatusField =
+      data.title !== undefined ||
+      data.content !== undefined ||
+      data.tags !== undefined;
+
+    if (hasNonStatusField) {
+      throw new AppError(HTTP_STATUS.FORBIDDEN, 'Admins can only update thread status');
+    }
+
+    if (data.status === undefined) {
+      throw new AppError(HTTP_STATUS.BAD_REQUEST, 'Status is required for admin updates');
+    }
+  } else if (thread.author.toString() !== userId) {
     throw new AppError(HTTP_STATUS.FORBIDDEN, 'You can only edit your own threads');
   }
 
@@ -79,10 +95,11 @@ export const updateThreadService = async (
   return updated!;
 };
 
-export const deleteThreadService = async (id: string, userId: string): Promise<void> => {
+export const deleteThreadService = async (id: string, userId: string, role: UserRole): Promise<void> => {
   const thread = await ForumThread.findById(id);
   if (!thread) throw new AppError(HTTP_STATUS.NOT_FOUND, 'Thread not found');
-  if (thread.author.toString() !== userId) {
+
+  if (role !== 'admin' && thread.author.toString() !== userId) {
     throw new AppError(HTTP_STATUS.FORBIDDEN, 'You can only delete your own threads');
   }
 

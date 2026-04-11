@@ -50,7 +50,8 @@ export const updateThreadHandler = async (req: Request, res: Response, next: Nex
     const { id } = threadIdParamSchema.parse(req.params);
     const data = updateThreadSchema.parse(req.body);
     const userId = req.user.userId;
-    const thread = await updateThreadService(id, data, userId);
+    const userRole = req.user.role;
+    const thread = await updateThreadService(id, data, userId, userRole);
     Logger.info(`Thread updated: ${id} by user: ${userId}`);
     res.status(200).json(thread);
   } catch (error) { next(error); }
@@ -60,7 +61,8 @@ export const deleteThreadHandler = async (req: Request, res: Response, next: Nex
   try {
     const { id } = threadIdParamSchema.parse(req.params);
     const userId = req.user.userId;
-    await deleteThreadService(id, userId);
+    const userRole = req.user.role;
+    await deleteThreadService(id, userId, userRole);
     Logger.info(`Thread deleted: ${id} by user: ${userId}`);
     res.status(204).send();
   } catch (error) { next(error); }

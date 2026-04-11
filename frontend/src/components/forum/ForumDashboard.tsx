@@ -75,6 +75,7 @@ const getApiErrorMessage = (error: unknown) => {
 
 export function ForumDashboard() {
   const dispatch = useAppDispatch()
+  const currentUserRole = useAppSelector((state) => state.auth.user?.role)
   const {
     expandedThreadIds,
     searchQuery,
@@ -97,6 +98,7 @@ export function ForumDashboard() {
     status: "Open" as ForumThreadStatus,
   })
   const [threadFormError, setThreadFormError] = useState("")
+  const isAdminStatusOnlyMode = currentUserRole === "admin" && Boolean(editingThreadId)
 
   const threadQueryParams = useMemo(() => {
     const hasSearch = searchQuery.trim().length > 0
@@ -179,7 +181,7 @@ export function ForumDashboard() {
       .map((tag) => tag.trim())
       .filter(Boolean)
 
-    if (!title || !content) {
+    if (!isAdminStatusOnlyMode && (!title || !content)) {
       setThreadFormError("Title and content are required.")
       return
     }
@@ -190,12 +192,14 @@ export function ForumDashboard() {
       if (editingThreadId) {
         await updateThread({
           id: editingThreadId,
-          data: {
-            title,
-            content,
-            tags,
-            status: threadForm.status,
-          },
+          data: isAdminStatusOnlyMode
+            ? { status: threadForm.status }
+            : {
+                title,
+                content,
+                tags,
+                status: threadForm.status,
+              },
         }).unwrap()
       } else {
         await createThread({
@@ -475,7 +479,7 @@ export function ForumDashboard() {
       </div>
 
       <Dialog open={isCreateThreadModalOpen || Boolean(editingThreadId)} onOpenChange={closeThreadModal}>
-        <DialogContent className="sm:max-w-[625px]">
+        <DialogContent className="sm:max-w-156.25">
           <DialogHeader>
             <DialogTitle>{editingThreadId ? "Edit Thread" : "Create Thread"}</DialogTitle>
           </DialogHeader>
@@ -488,6 +492,7 @@ export function ForumDashboard() {
                 value={threadForm.title}
                 onChange={(event) => setThreadForm((prev) => ({ ...prev, title: event.target.value }))}
                 placeholder="Enter thread title"
+                disabled={isAdminStatusOnlyMode}
               />
             </div>
 
@@ -499,6 +504,7 @@ export function ForumDashboard() {
                 value={threadForm.content}
                 onChange={(event) => setThreadForm((prev) => ({ ...prev, content: event.target.value }))}
                 placeholder="Write thread content"
+                disabled={isAdminStatusOnlyMode}
               />
             </div>
 
@@ -510,6 +516,7 @@ export function ForumDashboard() {
                   value={threadForm.tags}
                   onChange={(event) => setThreadForm((prev) => ({ ...prev, tags: event.target.value }))}
                   placeholder="e.g. alerts, training"
+                  disabled={isAdminStatusOnlyMode}
                 />
               </div>
 
@@ -530,6 +537,10 @@ export function ForumDashboard() {
               </div>
             </div>
 
+            {isAdminStatusOnlyMode ? (
+              <p className="text-xs text-amber-600">Admins can only update thread status.</p>
+            ) : null}
+
             {threadFormError ? (
               <p className="text-sm text-red-500">{threadFormError}</p>
             ) : null}
@@ -539,7 +550,7 @@ export function ForumDashboard() {
             <Button variant="outline" onClick={closeThreadModal}>Cancel</Button>
             <Button
               onClick={() => void saveThread()}
-              disabled={!threadForm.title.trim() || !threadForm.content.trim() || isCreatingThread || isUpdatingThread}
+              disabled={(!isAdminStatusOnlyMode && (!threadForm.title.trim() || !threadForm.content.trim())) || isCreatingThread || isUpdatingThread}
             >
               {editingThreadId ? "Save Changes" : "Create Thread"}
             </Button>

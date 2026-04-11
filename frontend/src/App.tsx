@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider, Link } from "react-router-dom";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { MemberDashboardLayout } from "./components/layout/MemberDashboardLayout";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import { LoginPage } from "./features/auth/Login";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +21,7 @@ import { DistributionDashboard } from "./components/distribution/DistributionDas
 import { BlogDashboard } from "./components/blog/BlogDashboard";
 import { DriverDashboard } from "./components/drivers/DriverDashboard";
 import { BeneficiaryDashboard } from "./components/beneficiaries/BeneficiaryDashboard";
+import { MemberBeneficiarySubmission } from "./components/beneficiaries/MemberBeneficiarySubmission";
 import { ResourceDashboard } from "./components/inventory/ResourceDashboard";
 import { SupplierDashboard } from "./components/inventory/SupplierDashboard";
 import { InventoryTransactionDashboard } from "./components/inventory/InventoryTransactionDashboard";
@@ -69,7 +71,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <ProtectedRoute />,
+    element: <ProtectedRoute allowedRoles={['admin', 'driver']} />,
     errorElement: <div className="p-10 text-destructive font-bold text-2xl">404 - Not Found</div>,
     children: [
       {
@@ -181,6 +183,61 @@ const router = createBrowserRouter([
             element: <ProtectedRoute allowedRoles={['admin']} />,
             children: [{ index: true, element: <AdminSettingsPage /> }]
           }
+        ]
+      }
+    ],
+  },
+  {
+    path: "/member/dashboard",
+    element: <ProtectedRoute allowedRoles={['member']} />,
+    errorElement: <div className="p-10 text-destructive font-bold text-2xl">404 - Not Found</div>,
+    children: [
+      {
+        path: "/member/dashboard",
+        element: <MemberDashboardLayout />,
+        children: [
+          {
+            index: true,
+            element: (
+              <div className="h-full flex flex-col gap-6 p-6">
+                <h1 className="text-2xl font-bold text-gray-900">Member Dashboard</h1>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link to="/member/dashboard/beneficiaries" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Submit Beneficiary</h2>
+                    <p className="text-sm text-gray-500">Submit beneficiary details for admin approval.</p>
+                  </Link>
+                  <Link to="/member/dashboard/forum" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Community Forum</h2>
+                    <p className="text-sm text-gray-500">Join discussions, ask questions, and collaborate with the team.</p>
+                  </Link>
+                  <Link to="/member/dashboard/issues" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Issue Tracker</h2>
+                    <p className="text-sm text-gray-500">View and follow issue updates across water and logistics operations.</p>
+                  </Link>
+                  <Link to="/member/dashboard/profile" className="block p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-500 hover:shadow-md transition-all">
+                    <h2 className="text-emerald-900 font-semibold text-lg mb-2">Profile Settings</h2>
+                    <p className="text-sm text-gray-500">Manage your personal information and account preferences.</p>
+                  </Link>
+                </div>
+              </div>
+            ),
+          },
+          {
+            path: "beneficiaries",
+            children: [{ index: true, element: <MemberBeneficiarySubmission /> }]
+          },
+          {
+            path: "forum",
+            children: [{ index: true, element: <ForumDashboard /> }]
+          },
+          {
+            path: "issues",
+            children: [{ index: true, element: <IssueDashboard /> }]
+          },
+          {
+            path: "profile",
+            element: <ProfilePage />
+          },
         ]
       }
     ],

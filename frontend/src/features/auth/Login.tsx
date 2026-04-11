@@ -62,9 +62,15 @@ export const LoginPage = () => {
         })
       );
 
-      // Redirect back to where they intended to go, or home
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      // Redirect to the originally requested path when available.
+      const from = location.state?.from?.pathname as string | undefined;
+      const defaultPath = response.user.role === 'member' ? '/member/dashboard' : '/dashboard';
+      const destination =
+        (response.user.role === 'member' && from?.startsWith('/dashboard')) ||
+        (response.user.role !== 'member' && from?.startsWith('/member/dashboard'))
+          ? defaultPath
+          : (from || defaultPath);
+      navigate(destination, { replace: true });
     } catch (err) {
       console.error('Login failed:', err);
       // We will rely on RTK query error handling or show toast later

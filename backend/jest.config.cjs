@@ -3,6 +3,8 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.test.ts'],
+  // ensure environment variables are set before module imports in tests
+  setupFiles: ['<rootDir>/src/tests/integration/env.setup.ts'],
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
@@ -10,6 +12,7 @@ module.exports = {
         tsconfig: {
           module: 'commonjs',
           target: 'es2020',
+          esModuleInterop: true,
         },
       },
     ],

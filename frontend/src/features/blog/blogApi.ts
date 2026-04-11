@@ -41,6 +41,10 @@ export const blogApi = createApi({
       query: (params) => ({ url: "/blog", method: "GET", params }),
       providesTags: ["Blog"],
     }),
+    getBlogById: builder.query<BlogPost, string>({
+      query: (id) => ({ url: `/blog/${id}`, method: "GET" }),
+      providesTags: ["Blog"],
+    }),
     createBlog: builder.mutation<BlogPost, Partial<BlogPost>>({
       query: (data) => ({
         url: "/blog",
@@ -69,6 +73,7 @@ export const blogApi = createApi({
 
 export const {
   useGetBlogsQuery,
+  useGetBlogByIdQuery,
   useCreateBlogMutation,
   useUpdateBlogMutation,
   useDeleteBlogMutation,

@@ -70,7 +70,7 @@ describe('beneficiary.controller', () => {
 
     await getAllBeneficiariesController(req, res as any, next);
 
-    expect(getAllBeneficiaries).toHaveBeenCalledWith(undefined);
+    expect(getAllBeneficiaries).toHaveBeenCalledWith({});
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(beneficiaries);
   });

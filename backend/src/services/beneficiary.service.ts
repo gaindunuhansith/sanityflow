@@ -5,11 +5,12 @@ import { AppError } from '../utils/errorHandler.js';
 
 export const createBeneficiary = async (data: Partial<IBeneficiary>) => {
   // TODO: Send notification to beneficiary (if needed)
-  return await Beneficiary.create(data);
+  const createdBeneficiary = await Beneficiary.create(data);
+  return await createdBeneficiary.populate('submittedBy', 'name email');
 };
 
 export const getAllBeneficiaries = async (filters?: {
-  eligibilityStatus?: 'Active' | 'Inactive';
+  eligibilityStatus?: 'Pending' | 'Active' | 'Inactive';
   search?: string;
   page?: number;
   limit?: number;
@@ -32,7 +33,11 @@ export const getAllBeneficiaries = async (filters?: {
   const skip = (page - 1) * limit;
 
   const [items, total] = await Promise.all([
-    Beneficiary.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Beneficiary.find(query)
+      .populate('submittedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
     Beneficiary.countDocuments(query),
   ]);
 
@@ -49,7 +54,7 @@ export const getBeneficiaryById = async (id: string) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError(400, 'Invalid beneficiary ID');
   }
-  const beneficiary = await Beneficiary.findById(id);
+  const beneficiary = await Beneficiary.findById(id).populate('submittedBy', 'name email');
   if (!beneficiary) {
     throw new AppError(404, 'Beneficiary not found');
   }
@@ -64,7 +69,7 @@ export const updateBeneficiary = async (id: string, data: Partial<IBeneficiary>)
     id,
     data,
     { new: true, runValidators: true }
-  );
+  ).populate('submittedBy', 'name email');
   if (!beneficiary) {
     throw new AppError(404, 'Beneficiary not found');
   }

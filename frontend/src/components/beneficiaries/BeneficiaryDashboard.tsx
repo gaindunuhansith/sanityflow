@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from "react"
-import { ChevronRight, ChevronsUpDown, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react"
+import { Check, ChevronRight, ChevronsUpDown, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 
 import { Input } from "@/components/ui/input"
@@ -50,6 +50,10 @@ import {
 } from "@/features/beneficiary/beneficiarySlice"
 
 const getEligibilityBadgeClass = (status: BeneficiaryEligibilityStatus) => {
+  if (status === "Pending") {
+    return "bg-amber-100 text-amber-700"
+  }
+
   if (status === "Active") {
     return "bg-[#ebf8ee] text-[#4dbd74]"
   }
@@ -143,6 +147,7 @@ export function BeneficiaryDashboard() {
   const [editEligibilityStatus, setEditEligibilityStatus] = useState<BeneficiaryEligibilityStatus>("Active")
   const [editFormError, setEditFormError] = useState("")
   const [deleteFormError, setDeleteFormError] = useState("")
+  const [statusActionError, setStatusActionError] = useState("")
   const {
     searchText,
     eligibilityFilter,
@@ -312,6 +317,17 @@ export function BeneficiaryDashboard() {
     dispatch(setSelectedBeneficiaryIdForDelete(beneficiaryId))
   }
 
+  const handleSetBeneficiaryStatus = async (id: string, status: BeneficiaryEligibilityStatus) => {
+    setStatusActionError("")
+
+    try {
+      await updateBeneficiary({ id, eligibilityStatus: status }).unwrap()
+      dispatch(distributionApi.util.invalidateTags([{ type: "Beneficiary", id: "LIST" }]))
+    } catch (error) {
+      setStatusActionError(getApiErrorMessage(error))
+    }
+  }
+
   const closeDeleteDialog = () => {
     setDeleteFormError("")
     dispatch(setSelectedBeneficiaryIdForDelete(null))
@@ -416,6 +432,28 @@ export function BeneficiaryDashboard() {
             </TableCell>
             <TableCell className="text-right pr-6 py-4">
               <div className="flex items-center justify-end gap-1">
+                {beneficiary.eligibilityStatus === "Pending" ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
+                      onClick={() => void handleSetBeneficiaryStatus(beneficiary._id, "Active")}
+                      disabled={isUpdatingBeneficiary}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-amber-600 hover:bg-amber-50"
+                      onClick={() => void handleSetBeneficiaryStatus(beneficiary._id, "Inactive")}
+                      disabled={isUpdatingBeneficiary}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : null}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -440,7 +478,7 @@ export function BeneficiaryDashboard() {
             <TableRow className="bg-emerald-50/5 border-b border-gray-100 hover:bg-emerald-50/5">
               <TableCell colSpan={6} className="p-0">
                 <div className="bg-emerald-50/20 border-t border-emerald-100/50 px-8 py-5">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
                       <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Beneficiary ID</p>
                       <p className="text-sm font-medium text-gray-800 break-all">{beneficiary._id}</p>
@@ -452,6 +490,14 @@ export function BeneficiaryDashboard() {
                     <div>
                       <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Updated</p>
                       <p className="text-sm font-medium text-gray-800">{new Date(beneficiary.updatedAt).toLocaleDateString("en-US")}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Submitted By</p>
+                      <p className="text-sm font-medium text-gray-800">
+                        {typeof beneficiary.submittedBy === "object"
+                          ? beneficiary.submittedBy.name || beneficiary.submittedBy.email || beneficiary.submittedBy._id
+                          : beneficiary.submittedBy || "Unknown"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -523,6 +569,7 @@ export function BeneficiaryDashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Eligibility</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
               <SelectItem value="Active">Active</SelectItem>
               <SelectItem value="Inactive">Inactive</SelectItem>
             </SelectContent>
@@ -546,6 +593,7 @@ export function BeneficiaryDashboard() {
         <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium">
           Showing {beneficiaries.length} of {totalBeneficiaries} beneficiaries
         </span>
+        {statusActionError ? <span className="text-rose-600 text-xs">{statusActionError}</span> : null}
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -677,6 +725,7 @@ export function BeneficiaryDashboard() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Pending">Pending</SelectItem>
                   <SelectItem value="Active">Active</SelectItem>
                   <SelectItem value="Inactive">Inactive</SelectItem>
                 </SelectContent>
@@ -766,6 +815,7 @@ export function BeneficiaryDashboard() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Pending">Pending</SelectItem>
                   <SelectItem value="Active">Active</SelectItem>
                   <SelectItem value="Inactive">Inactive</SelectItem>
                 </SelectContent>

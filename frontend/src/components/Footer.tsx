@@ -18,18 +18,18 @@ export function Footer() {
               Empowering communities with technology that ensures clean, reliable water access for every person, everywhere.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">
+              <button type="button" className="text-gray-400 hover:text-emerald-400 transition-colors" aria-label="Global updates">
                 <Globe className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">
+              </button>
+              <button type="button" className="text-gray-400 hover:text-emerald-400 transition-colors" aria-label="Community chat">
                 <MessageCircle className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">
+              </button>
+              <button type="button" className="text-gray-400 hover:text-emerald-400 transition-colors" aria-label="Support">
                 <Heart className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">
+              </button>
+              <button type="button" className="text-gray-400 hover:text-emerald-400 transition-colors" aria-label="External resources">
                 <ExternalLink className="h-5 w-5" />
-              </a>
+              </button>
             </div>
           </div>
 
@@ -52,6 +52,12 @@ export function Footer() {
               <Link to="/help" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
                 Help Center
               </Link>
+              <Link to="/forum" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
+                Community Forum
+              </Link>
+              <Link to="/blog" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
+                Blog & Updates
+              </Link>
             </div>
           </div>
 
@@ -68,12 +74,12 @@ export function Footer() {
               <Link to="/privacy" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
                 Privacy Policy
               </Link>
-              <a href="#" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
+              <Link to="/terms" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
                 Terms of Service
-              </a>
-              <a href="#" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
+              </Link>
+              <Link to="/status" className="block text-gray-300 hover:text-emerald-400 transition-colors text-sm">
                 Status
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -82,18 +88,18 @@ export function Footer() {
             <h3 className="text-lg font-semibold">Contact Info</h3>
             <div className="space-y-3">
               <div className="flex items-start space-x-3">
-                <MapPin className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                <MapPin className="h-5 w-5 text-emerald-400 mt-0.5 shrink-0" />
                 <span className="text-gray-300 text-sm">
                   123 Water Street<br />
                   Clean City, CC 12345
                 </span>
               </div>
               <div className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                <Phone className="h-5 w-5 text-emerald-400 shrink-0" />
                 <span className="text-gray-300 text-sm">+1 (555) 123-4567</span>
               </div>
               <div className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                <Mail className="h-5 w-5 text-emerald-400 shrink-0" />
                 <span className="text-gray-300 text-sm">support@sanityflow.com</span>
               </div>
             </div>
@@ -107,15 +113,15 @@ export function Footer() {
               © 2024 SanityFlow. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors text-sm">
+              <Link to="/privacy" className="text-gray-400 hover:text-emerald-400 transition-colors text-sm">
                 Privacy
-              </a>
-              <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors text-sm">
+              </Link>
+              <Link to="/terms" className="text-gray-400 hover:text-emerald-400 transition-colors text-sm">
                 Terms
-              </a>
-              <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors text-sm">
+              </Link>
+              <Link to="/cookies" className="text-gray-400 hover:text-emerald-400 transition-colors text-sm">
                 Cookies
-              </a>
+              </Link>
             </div>
           </div>
         </div>

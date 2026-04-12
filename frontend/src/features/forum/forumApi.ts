@@ -101,6 +101,13 @@ export const forumApi = createApi({
         ]
       },
     }),
+    getForumThreadById: builder.query<ForumThread, string>({
+      query: (id) => ({
+        url: `/community/forum/${id}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, id) => [{ type: "ForumThread", id }],
+    }),
     getForumReplies: builder.query<GetRepliesResponse, GetRepliesParams>({
       query: ({ threadId, page = 1, limit = 10 }) => ({
         url: `/community/forum/${threadId}/replies`,
@@ -156,6 +163,7 @@ export const forumApi = createApi({
 
 export const {
   useGetForumThreadsQuery,
+  useGetForumThreadByIdQuery,
   useGetForumRepliesQuery,
   useCreateForumReplyMutation,
   useCreateForumThreadMutation,

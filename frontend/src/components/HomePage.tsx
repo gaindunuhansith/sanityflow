@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,13 +49,13 @@ export function HomePage() {
       icon: <Users className="h-8 w-8 text-emerald-600" />,
       title: "Community Forum",
       description: "Connect with community members, share updates, and discuss water-related topics.",
-      link: "/dashboard/forum"
+      link: "/forum"
     },
     {
       icon: <FileText className="h-8 w-8 text-emerald-600" />,
       title: "Blog & Updates",
       description: "Stay informed with the latest news, updates, and educational content about water management.",
-      link: "/dashboard/blog"
+      link: "/blog"
     }
   ];
 
@@ -67,12 +67,12 @@ export function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-emerald-50">
       <Header />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-white">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/5 to-emerald-800/5"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-emerald-600/5 to-emerald-800/5"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
@@ -98,7 +98,7 @@ export function HomePage() {
             </div>
             <div className="relative">
               {/* Hero Image Placeholder */}
-              <div className="aspect-square bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center shadow-2xl">
+              <div className="aspect-square bg-linear-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center shadow-2xl">
                 <div className="text-center">
                   <Droplets className="h-24 w-24 text-emerald-600 mx-auto mb-4" />
                   <p className="text-emerald-800 font-semibold text-lg">Real-Time Water Quality Monitoring</p>
@@ -114,8 +114,8 @@ export function HomePage() {
       <section className="py-16 bg-emerald-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
+            {stats.map((stat) => (
+              <div key={stat.label} className="text-center">
                 <div className="text-3xl md:text-4xl font-bold text-white mb-2">{stat.number}</div>
                 <div className="text-emerald-100 text-sm md:text-base">{stat.label}</div>
               </div>
@@ -137,8 +137,8 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md hover:-translate-y-1">
+            {features.map((feature) => (
+              <Card key={feature.title} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md hover:-translate-y-1">
                 <CardHeader className="pb-4">
                   <div className="mb-4 p-3 bg-emerald-50 rounded-lg w-fit group-hover:bg-emerald-100 transition-colors">
                     {feature.icon}
@@ -189,7 +189,7 @@ export function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="relative">
               {/* About Image Placeholder */}
-              <div className="aspect-square bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center shadow-xl">
+              <div className="aspect-square bg-linear-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center shadow-xl">
                 <div className="text-center">
                   <Activity className="h-20 w-20 text-emerald-600 mx-auto mb-4" />
                   <p className="text-emerald-800 font-semibold text-lg">Real-time Monitoring</p>

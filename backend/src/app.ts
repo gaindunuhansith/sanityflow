@@ -20,11 +20,12 @@ import errorHandler from './utils/errorHandler.js';
 import helmet from 'helmet';
 import morganMiddleware from './config/morgan.js';
 import apiRateLimiter from './middleware/rateLimit.js';
+import env from './config/env.js';
 
 const app = express();
 
 //middleware
-app.use(cors());
+app.use(cors({ origin: env.FRONTEND_APP_ORIGIN, credentials: true }));
 app.use(express.json());
 app.use(helmet());
 app.use(morganMiddleware);

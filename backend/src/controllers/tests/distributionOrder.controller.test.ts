@@ -109,7 +109,7 @@ describe('distributionOrder.controller', () => {
 
     await getDistributionOrderById(req, res as any, next);
 
-    expect(distributionOrderService.getDistributionOrderById).toHaveBeenCalledWith('ord1', { role: 'admin' });
+    expect(distributionOrderService.getDistributionOrderById).toHaveBeenCalledWith('ord1', { userId: expect.any(String), role: 'admin' });
     expect(res.json).toHaveBeenCalledWith(order);
   });
 

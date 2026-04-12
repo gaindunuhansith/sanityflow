@@ -193,7 +193,7 @@ describe('forum.controller', () => {
   });
 
   it('deleteReplyHandler should return 204', async () => {
-    const req = { params: { id: 'raw-id', replyId: 'raw-reply' }, user: { userId: 'u1' } } as any;
+    const req = { params: { id: 'raw-id', replyId: 'raw-reply' }, user: { userId: 'u1', role: 'member' } } as any;
     const res = createMockRes();
     const next = jest.fn();
 
@@ -202,7 +202,7 @@ describe('forum.controller', () => {
 
     await deleteReplyHandler(req, res as any, next);
 
-    expect(deleteReplyService).toHaveBeenCalledWith('t6', 'r2', 'u1');
+    expect(deleteReplyService).toHaveBeenCalledWith('t6', 'r2', 'u1', 'member');
     expect(Logger.info).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(204);
     expect(res.send).toHaveBeenCalled();

@@ -1,18 +1,15 @@
 import { z } from 'zod';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const getEnvPath = () => {
-    return path.resolve(process.cwd(), '.env');
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const config = dotenv.config || (dotenv as any).default?.config;
-if (config) {
-    config({ path: getEnvPath() });
-}
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const envSchema = z.object({
-    NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
+    NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
     PORT: z.coerce.number().positive().default(3000),
     MONGODB_URI: z.url(),
     JWT_SECRET: z.string().min(32),

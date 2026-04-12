@@ -53,19 +53,19 @@ export const blogApi = createApi({
     getBlogAiSummary: builder.query<BlogAiSummaryResponse, string>({
       query: (id) => ({ url: `/ai/summarize/blog/${id}`, method: "GET" }),
     }),
-    createBlog: builder.mutation<BlogPost, Partial<BlogPost>>({
-      query: (data) => ({
+    createBlog: builder.mutation<BlogPost, FormData>({
+      query: (formData) => ({
         url: "/blog",
         method: "POST",
-        data,
+        data: formData,
       }),
       invalidatesTags: ["Blog"],
     }),
-    updateBlog: builder.mutation<BlogPost, { id: string; data: Partial<BlogPost> }>({
-      query: ({ id, data }) => ({
+    updateBlog: builder.mutation<BlogPost, { id: string; data: FormData }>({
+      query: ({ id, data: formData }) => ({
         url: `/blog/${id}`,
         method: "PATCH",
-        data,
+        data: formData,
       }),
       invalidatesTags: ["Blog"],
     }),

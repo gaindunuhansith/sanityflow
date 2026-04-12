@@ -36,7 +36,7 @@ export const getBlogPostByIdHandler = async (req: Request, res: Response, next: 
 export const createBlogPostHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = createBlogPostSchema.parse(req.body);
-    const post = await createBlogPostService(data);
+    const post = await createBlogPostService(data, req.file);
     res.status(201).json(post);
   } catch (error) {
     next(error);
@@ -47,7 +47,7 @@ export const updateBlogPostHandler = async (req: Request, res: Response, next: N
   try {
     const { id } = blogPostIdParamSchema.parse(req.params);
     const data = updateBlogPostSchema.parse(req.body);
-    const post = await updateBlogPostService(id, data);
+    const post = await updateBlogPostService(id, data, req.file);
     res.status(200).json(post);
   } catch (error) {
     next(error);

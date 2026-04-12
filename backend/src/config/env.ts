@@ -21,6 +21,16 @@ const envSchema = z.object({
     EMAIL_API_KEY: z.string().min(1),
     OPENWEATHER_API_KEY: z.string().min(1),
     ALERT_EMAIL: z.string(),
+
+    AWS_REGION: z.string().min(1).optional(),
+    AWS_S3_BUCKET: z.string().min(1).optional(),
+    AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
+    AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    AWS_S3_PUBLIC_BASE_URL: z.url().optional(),
+
+    BLOG_IMAGE_MAX_MB: z.coerce.number().positive().default(5),
+    BLOG_IMAGE_MAX_WIDTH: z.coerce.number().int().positive().default(1600),
+    BLOG_IMAGE_WEBP_QUALITY: z.coerce.number().int().min(1).max(100).default(80),
 })
 
 const parseEnv = () => {

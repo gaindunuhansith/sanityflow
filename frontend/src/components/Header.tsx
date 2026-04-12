@@ -56,26 +56,6 @@ export function Header() {
               About
             </Link>
             <Link
-              to="/documentation"
-              className={`px-3 py-2 text-sm font-medium transition-colors ${
-                isActive("/documentation")
-                  ? "text-emerald-600 bg-emerald-50 rounded-md"
-                  : "text-gray-700 hover:text-emerald-600"
-              }`}
-            >
-              Documentation
-            </Link>
-            <Link
-              to="/help"
-              className={`px-3 py-2 text-sm font-medium transition-colors ${
-                isActive("/help")
-                  ? "text-emerald-600 bg-emerald-50 rounded-md"
-                  : "text-gray-700 hover:text-emerald-600"
-              }`}
-            >
-              Help Center
-            </Link>
-            <Link
               to="/forum"
               className={`px-3 py-2 text-sm font-medium transition-colors ${
                 isActive("/forum")
@@ -94,16 +74,6 @@ export function Header() {
               }`}
             >
               Blog
-            </Link>
-            <Link
-              to="/contact"
-              className={`px-3 py-2 text-sm font-medium transition-colors ${
-                isActive("/contact")
-                  ? "text-emerald-600 bg-emerald-50 rounded-md"
-                  : "text-gray-700 hover:text-emerald-600"
-              }`}
-            >
-              Contact Us
             </Link>
           </nav>
 

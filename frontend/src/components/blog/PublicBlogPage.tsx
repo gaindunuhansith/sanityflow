@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { type BlogPost, useGetBlogAiSummaryQuery, useGetBlogsQuery } from "@/features/blog/blogApi"
 
-function BlogListItem({ post }: { post: BlogPost }) {
+function BlogListItem({ post }: Readonly<{ post: BlogPost }>) {
   const { data: aiSummaryResult, isLoading: isLoadingAiSummary } = useGetBlogAiSummaryQuery(post._id)
   const readTime = Math.max(1, Math.ceil((post.content?.length || 0) / 1000))
   const defaultImage = "https://images.unsplash.com/photo-1542435503-956c224213d2?q=80&w=2670&auto=format&fit=crop"
-  const fallbackSummary = post.summary || post.content.slice(0, 180).replace(/<[^>]*>?/gm, "").trim()
+  const fallbackSummary = post.summary || post.content.slice(0, 180).replaceAll(/<[^>]*>?/g, "").trim()
   const aiOverview = aiSummaryResult?.summary || fallbackSummary
 
   return (
@@ -27,7 +27,7 @@ function BlogListItem({ post }: { post: BlogPost }) {
               <Sparkles className="h-3.5 w-3.5" />
               <span>AI Overview</span>
             </div>
-            <p className="text-[15px] leading-[22px] text-gray-600 line-clamp-2">
+            <p className="text-[15px] leading-5.5 text-gray-600 line-clamp-2">
               {isLoadingAiSummary ? "Generating AI overview..." : aiOverview}
             </p>
           </div>
@@ -50,7 +50,7 @@ function BlogListItem({ post }: { post: BlogPost }) {
             )}
           </div>
         </div>
-        <div className="shrink-0 w-full sm:w-[160px] h-[160px] sm:h-[105px] overflow-hidden rounded">
+        <div className="shrink-0 w-full sm:w-40 h-40 sm:h-26.25 overflow-hidden rounded">
           <img
             src={post.coverImage || defaultImage}
             alt={post.title}
@@ -94,7 +94,7 @@ export function PublicBlogPage() {
         </div>
       </section>
 
-      <main className="mx-auto w-full max-w-[680px] px-4 py-12 sm:px-6">
+      <main className="mx-auto w-full max-w-170 px-4 py-12 sm:px-6">
         <div className="mb-10 flex items-center justify-between border-b border-gray-200 pb-4">
           <h2 className="text-[17px] font-medium text-gray-900">Latest</h2>
           <div className="w-64">

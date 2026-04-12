@@ -1,4 +1,4 @@
-import { Header } from "./Header";
+﻿import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,12 +64,12 @@ export function DocumentationPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-emerald-50">
       <Header />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-white py-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/5 to-emerald-800/5"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-emerald-600/5 to-emerald-800/5"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
@@ -105,8 +105,8 @@ export function DocumentationPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {quickStartGuides.map((guide, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md hover:-translate-y-1">
+            {quickStartGuides.map((guide) => (
+              <Card key={guide.title} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md hover:-translate-y-1">
                 <CardHeader className="pb-4">
                   <div className="p-3 bg-emerald-50 rounded-lg w-fit mb-4 group-hover:bg-emerald-100 transition-colors">
                     {guide.icon}
@@ -146,8 +146,8 @@ export function DocumentationPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {documentationSections.map((section, index) => (
-              <Card key={index} className="text-center border-0 shadow-md hover:shadow-lg transition-shadow">
+            {documentationSections.map((section) => (
+              <Card key={section.title} className="text-center border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardContent className="p-8">
                   <div className={`inline-flex items-center justify-center w-16 h-16 ${section.color} rounded-full mb-4`}>
                     {section.icon}
@@ -249,7 +249,7 @@ export function DocumentationPage() {
       {/* Documentation Image Placeholder */}
       <section className="py-24 bg-emerald-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="aspect-video bg-gradient-to-br from-white/10 to-white/5 rounded-lg flex items-center justify-center mb-8">
+          <div className="aspect-video bg-linear-to-br from-white/10 to-white/5 rounded-lg flex items-center justify-center mb-8">
             <div className="text-center">
               <Book className="h-24 w-24 text-white mx-auto mb-4" />
               <p className="text-white font-semibold text-lg">Complete Implementation Guides</p>

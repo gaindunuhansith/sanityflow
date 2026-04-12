@@ -53,7 +53,7 @@ export function PublicForumThreadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-emerald-50">
       <Header />
 
       <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
@@ -132,11 +132,7 @@ export function PublicForumThreadPage() {
           </div>
 
           <div className="mt-6 border-t border-gray-100 pt-5">
-            {!isAuthenticated ? (
-              <p className="mt-2 text-sm text-gray-600">
-                Login to post a reply.
-              </p>
-            ) : (
+            {isAuthenticated ? (
               <div className="mt-3 space-y-3">
                 <Textarea
                   rows={4}
@@ -154,6 +150,10 @@ export function PublicForumThreadPage() {
                   {isReplySubmitting ? "Posting..." : "Post Reply"}
                 </Button>
               </div>
+            ) : (
+              <p className="mt-2 text-sm text-gray-600">
+                Login to post a reply.
+              </p>
             )}
           </div>
         </section>

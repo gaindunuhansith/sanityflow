@@ -123,7 +123,7 @@ describe('forum.controller', () => {
   });
 
   it('updateThreadHandler should return 200 with updated thread', async () => {
-    const req = { params: { id: 'raw-id' }, body: { title: 'Updated' }, user: { userId: 'u1' } } as any;
+    const req = { params: { id: 'raw-id' }, body: { title: 'Updated' }, user: { userId: 'u1', role: 'member' } } as any;
     const res = createMockRes();
     const next = jest.fn();
     const parsedBody = { title: 'Updated' };
@@ -135,14 +135,14 @@ describe('forum.controller', () => {
 
     await updateThreadHandler(req, res as any, next);
 
-    expect(updateThreadService).toHaveBeenCalledWith('t2', parsedBody, 'u1');
+    expect(updateThreadService).toHaveBeenCalledWith('t2', parsedBody, 'u1', 'member');
     expect(Logger.info).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(updatedThread);
   });
 
   it('deleteThreadHandler should return 204', async () => {
-    const req = { params: { id: 'raw-id' }, user: { userId: 'u1' } } as any;
+    const req = { params: { id: 'raw-id' }, user: { userId: 'u1', role: 'member' } } as any;
     const res = createMockRes();
     const next = jest.fn();
 
@@ -151,7 +151,7 @@ describe('forum.controller', () => {
 
     await deleteThreadHandler(req, res as any, next);
 
-    expect(deleteThreadService).toHaveBeenCalledWith('t3', 'u1');
+    expect(deleteThreadService).toHaveBeenCalledWith('t3', 'u1', 'member');
     expect(Logger.info).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(204);
     expect(res.send).toHaveBeenCalled();

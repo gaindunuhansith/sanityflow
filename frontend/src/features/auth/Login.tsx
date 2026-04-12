@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SyntheticEvent } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import type { SerializedError } from '@reduxjs/toolkit';
 import { useLoginMutation } from '@/features/auth/authApi';
 import { setCredentials } from '@/features/auth/authSlice';
-import type { AppDispatch } from '@/store';
+import { getDefaultDashboardPath, isPathAllowedForRole } from '@/features/auth/redirects';
+import type { AppDispatch, RootState } from '@/store';
 import {
   Card,
   CardContent,
@@ -26,6 +27,14 @@ export const LoginPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
+  const authState = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (authState.isAuthenticated && authState.user) {
+      const defaultPath = getDefaultDashboardPath(authState.user.role);
+      navigate(defaultPath, { replace: true });
+    }
+  }, [authState.isAuthenticated, authState.user, navigate]);
 
   const getErrorMessage = (apiError: FetchBaseQueryError | SerializedError | undefined) => {
     if (!apiError) {
@@ -64,12 +73,9 @@ export const LoginPage = () => {
 
       // Redirect to the originally requested path when available.
       const from = location.state?.from?.pathname as string | undefined;
-      const defaultPath = response.user.role === 'member' ? '/member/dashboard' : '/dashboard';
+      const defaultPath = getDefaultDashboardPath(response.user.role);
       const destination =
-        (response.user.role === 'member' && from?.startsWith('/dashboard')) ||
-        (response.user.role !== 'member' && from?.startsWith('/member/dashboard'))
-          ? defaultPath
-          : (from || defaultPath);
+        from && isPathAllowedForRole(from, response.user.role) ? from : defaultPath;
       navigate(destination, { replace: true });
     } catch (err) {
       console.error('Login failed:', err);
@@ -126,7 +132,7 @@ export const LoginPage = () => {
               </div>
             )}
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-3">
             <Button
               type="submit"
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -134,6 +140,12 @@ export const LoginPage = () => {
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
+            <p className="text-sm text-muted-foreground text-center">
+              New here?{' '}
+              <Link to="/signup" className="text-emerald-700 hover:text-emerald-800 font-medium">
+                Create an account
+              </Link>
+            </p>
           </CardFooter>
         </form>
       </Card>

@@ -48,7 +48,7 @@ export function Header() {
     dispatch(forumApi.util.resetApiState());
     dispatch(distributionApi.util.resetApiState());
     dispatch(beneficiaryApi.util.resetApiState());
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   const filteredMenu = useMemo(() => {

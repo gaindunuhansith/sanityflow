@@ -3,6 +3,7 @@ import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { MemberDashboardLayout } from "./components/layout/MemberDashboardLayout";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import { LoginPage } from "./features/auth/Login";
+import { SignupPage } from "./features/auth/Signup";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HomePage } from "./components/HomePage";
 import { ContactPage } from "./components/ContactPage";
@@ -78,6 +79,10 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />
+  },
+  {
+    path: "/signup",
+    element: <SignupPage />
   },
   {
     path: "/dashboard",

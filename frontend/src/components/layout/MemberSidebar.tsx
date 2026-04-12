@@ -31,7 +31,7 @@ export function MemberSidebar() {
     dispatch(forumApi.util.resetApiState());
     dispatch(distributionApi.util.resetApiState());
     dispatch(beneficiaryApi.util.resetApiState());
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   return (

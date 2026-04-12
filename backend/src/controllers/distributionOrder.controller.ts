@@ -30,11 +30,11 @@ export const getAllDistributionOrders = async (req: Request, res: Response, next
       limit?: number;
     } = {};
 
-    if (status) filters.status = String(status);
+    if (typeof status === 'string') filters.status = status;
     if (isDriver) filters.driver = req.user.userId;
-    else if (driver) filters.driver = String(driver);
-    if (beneficiary) filters.beneficiary = String(beneficiary);
-    if (search) filters.search = String(search);
+    else if (typeof driver === 'string') filters.driver = driver;
+    if (typeof beneficiary === 'string') filters.beneficiary = beneficiary;
+    if (typeof search === 'string') filters.search = search;
     if (page) filters.page = Number(page);
     if (limit) filters.limit = Number(limit);
 

@@ -132,7 +132,7 @@ describe('distributionOrder.controller', () => {
   });
 
   it('updateDeliveryStatus should return 200 with updated status', async () => {
-    const req = { params: { id: 'ord1' }, body: { status: 'In Transit' }, user: { userId: 'uid1' } } as any;
+    const req = { params: { id: 'ord1' }, body: { status: 'In Transit' }, user: { userId: 'u1' } } as any;
     const res = createMockRes();
     const next = jest.fn();
     const parsedBody = { status: 'In Transit' };
@@ -145,7 +145,7 @@ describe('distributionOrder.controller', () => {
     await updateDeliveryStatus(req, res as any, next);
 
     expect(updateDeliveryStatusSchema.parse).toHaveBeenCalledWith(req.body);
-    expect(distributionOrderService.updateDeliveryStatus).toHaveBeenCalledWith('ord1', 'In Transit', 'uid1');
+    expect(distributionOrderService.updateDeliveryStatus).toHaveBeenCalledWith('ord1', 'In Transit', 'u1');
     expect(res.json).toHaveBeenCalledWith(updated);
   });
 

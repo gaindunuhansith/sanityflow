@@ -151,7 +151,7 @@ describe('forum.controller', () => {
 
     await deleteThreadHandler(req, res as any, next);
 
-    expect(deleteThreadService).toHaveBeenCalledWith('t3', 'u1', 'member');     
+    expect(deleteThreadService).toHaveBeenCalledWith('t3', 'u1', 'member');
     expect(Logger.info).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(204);
     expect(res.send).toHaveBeenCalled();

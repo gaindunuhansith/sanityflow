@@ -43,7 +43,7 @@ export interface BeneficiaryItem {
   location: string
   familySize?: number
   contact?: string
-  eligibilityStatus: "Active" | "Inactive"
+  eligibilityStatus: "Pending" | "Active" | "Inactive"
   createdAt?: string
   updatedAt?: string
 }
@@ -127,7 +127,7 @@ export interface GetDriversParams {
 }
 
 export interface GetBeneficiariesParams {
-  eligibilityStatus?: "Active" | "Inactive"
+  eligibilityStatus?: "Pending" | "Active" | "Inactive"
   page?: number
   limit?: number
 }

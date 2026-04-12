@@ -43,11 +43,11 @@ describe('beneficiary.controller', () => {
   });
 
   it('createBeneficiaryController should return 201 with new beneficiary', async () => {
-    const req = { body: { name: 'Alice' } } as any;
+    const req = { body: { name: 'Alice' }, user: { userId: 'admin1', role: 'admin' } } as any;
     const res = createMockRes();
     const next = jest.fn();
     const parsedBody = { name: 'Alice', location: 'Colombo', familySize: 3, contact: '0711111111', eligibilityStatus: 'Active' as const };
-    const created = { _id: 'b1', ...parsedBody };
+    const created = { _id: 'b1', ...parsedBody, submittedBy: 'admin1' };
 
     (createBeneficiarySchema.parse as jest.Mock).mockReturnValue(parsedBody);
     (createBeneficiary as jest.MockedFunction<typeof createBeneficiary>).mockResolvedValue(created as any);
@@ -55,9 +55,29 @@ describe('beneficiary.controller', () => {
     await createBeneficiaryController(req, res as any, next);
 
     expect(createBeneficiarySchema.parse).toHaveBeenCalledWith(req.body);
-    expect(createBeneficiary).toHaveBeenCalledWith(parsedBody);
+    expect(createBeneficiary).toHaveBeenCalledWith({ ...parsedBody, submittedBy: 'admin1' });
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(created);
+  });
+
+  it('createBeneficiaryController should force Pending status for member submissions', async () => {
+    const req = { body: { name: 'Alice' }, user: { userId: 'member1', role: 'member' } } as any;
+    const res = createMockRes();
+    const next = jest.fn();
+    const parsedBody = { name: 'Alice', location: 'Colombo', familySize: 3, contact: '0711111111', eligibilityStatus: 'Active' as const };
+    const created = { _id: 'b1', ...parsedBody, eligibilityStatus: 'Pending', submittedBy: 'member1' };
+
+    (createBeneficiarySchema.parse as jest.Mock).mockReturnValue(parsedBody);
+    (createBeneficiary as jest.MockedFunction<typeof createBeneficiary>).mockResolvedValue(created as any);
+
+    await createBeneficiaryController(req, res as any, next);
+
+    expect(createBeneficiary).toHaveBeenCalledWith({
+      ...parsedBody,
+      eligibilityStatus: 'Pending',
+      submittedBy: 'member1',
+    });
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 
   it('getAllBeneficiariesController should return 200 with all beneficiaries', async () => {
@@ -140,7 +160,7 @@ describe('beneficiary.controller', () => {
   });
 
   it('should call next(error) when service throws in createBeneficiaryController', async () => {
-    const req = { body: {} } as any;
+    const req = { body: {}, user: { userId: 'member1', role: 'member' } } as any;
     const res = createMockRes();
     const next = jest.fn();
     const error = new Error('Database failed');

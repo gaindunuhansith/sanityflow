@@ -1,4 +1,4 @@
-import { Header } from "./Header";
+﻿import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -95,12 +95,12 @@ export function FeaturesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-emerald-50">
       <Header />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-white py-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/5 to-emerald-800/5"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-emerald-600/5 to-emerald-800/5"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
@@ -122,8 +122,8 @@ export function FeaturesPage() {
       <section className="py-16 bg-emerald-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
+            {stats.map((stat) => (
+              <div key={stat.label} className="text-center">
                 <div className="flex items-center justify-center mb-2">
                   {stat.icon}
                 </div>
@@ -148,8 +148,8 @@ export function FeaturesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md hover:-translate-y-1">
+            {features.map((feature) => (
+              <Card key={feature.title} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md hover:-translate-y-1">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between mb-4">
                     <div className="p-3 bg-emerald-50 rounded-lg group-hover:bg-emerald-100 transition-colors">
@@ -168,9 +168,9 @@ export function FeaturesPage() {
                     {feature.description}
                   </CardDescription>
                   <div className="space-y-2">
-                    {feature.benefits.map((benefit, benefitIndex) => (
-                      <div key={benefitIndex} className="flex items-center text-sm text-gray-600">
-                        <CheckCircle className="h-4 w-4 text-emerald-600 mr-2 flex-shrink-0" />
+                    {feature.benefits.map((benefit) => (
+                      <div key={`${feature.title}-${benefit}`} className="flex items-center text-sm text-gray-600">
+                        <CheckCircle className="h-4 w-4 text-emerald-600 mr-2 shrink-0" />
                         {benefit}
                       </div>
                     ))}
@@ -233,12 +233,12 @@ export function FeaturesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="border-0 shadow-md">
+            {testimonials.map((testimonial) => (
+              <Card key={testimonial.name} className="border-0 shadow-md">
                 <CardContent className="p-8">
                   <div className="flex items-center mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                    {Array.from({ length: testimonial.rating }).map((_, i) => (
+                      <Star key={`${testimonial.name}-star-${i}`} className="h-5 w-5 text-yellow-400 fill-current" />
                     ))}
                   </div>
                   <blockquote className="text-gray-600 mb-6 italic">
@@ -258,7 +258,7 @@ export function FeaturesPage() {
       {/* Features Image Placeholder */}
       <section className="py-24 bg-emerald-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="aspect-video bg-gradient-to-br from-white/10 to-white/5 rounded-lg flex items-center justify-center mb-8">
+          <div className="aspect-video bg-linear-to-br from-white/10 to-white/5 rounded-lg flex items-center justify-center mb-8">
             <div className="text-center">
               <TrendingUp className="h-24 w-24 text-white mx-auto mb-4" />
               <p className="text-white font-semibold text-lg">Proven Results: 99.9% System Reliability</p>

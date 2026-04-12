@@ -1,7 +1,13 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
 import { axiosBaseQuery } from "@/api/axiosBaseQuery"
 
-export type BeneficiaryEligibilityStatus = "Active" | "Inactive"
+export type BeneficiaryEligibilityStatus = "Pending" | "Active" | "Inactive"
+
+export interface BeneficiarySubmittedBy {
+  _id: string
+  name?: string
+  email?: string
+}
 
 export interface Beneficiary {
   _id: string
@@ -10,6 +16,7 @@ export interface Beneficiary {
   familySize: number
   contact: string
   eligibilityStatus: BeneficiaryEligibilityStatus
+  submittedBy?: BeneficiarySubmittedBy | string
   createdAt: string
   updatedAt: string
 }
@@ -55,7 +62,7 @@ export interface CreateBeneficiaryPayload {
   location: string
   familySize: number
   contact: string
-  eligibilityStatus: BeneficiaryEligibilityStatus
+  eligibilityStatus?: BeneficiaryEligibilityStatus
 }
 
 export interface UpdateBeneficiaryPayload {

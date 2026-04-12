@@ -1,3 +1,4 @@
+﻿import { Link } from "react-router-dom";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,12 +19,12 @@ import {
 
 export function ContactPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-emerald-50">
       <Header />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-white py-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/5 to-emerald-800/5"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-emerald-600/5 to-emerald-800/5"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
             Contact <span className="text-emerald-600">Us</span>
@@ -102,7 +103,7 @@ export function ContactPage() {
 
               {/* Contact Image Placeholder */}
               <div className="mt-8">
-                <div className="aspect-video bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-lg flex items-center justify-center">
+                <div className="aspect-video bg-linear-to-br from-emerald-100 to-emerald-200 rounded-lg flex items-center justify-center">
                   <div className="text-center">
                     <MessageSquare className="h-16 w-16 text-emerald-600 mx-auto mb-4" />
                     <p className="text-emerald-800 font-semibold">Expert Water Management Support</p>
@@ -185,8 +186,8 @@ export function ContactPage() {
                 <p className="text-gray-600 mb-4">
                   Connect with other users and share experiences in our community forum.
                 </p>
-                <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-                  Visit Forum
+                <Button asChild variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+                  <Link to="/forum">Visit Forum</Link>
                 </Button>
               </CardContent>
             </Card>

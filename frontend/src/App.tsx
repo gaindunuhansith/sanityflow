@@ -19,6 +19,8 @@ import { WaterSourceDashboard } from "./components/water-sources/WaterSourceDash
 import { WaterTestDashboard } from "./components/water-tests/WaterTestDashboard";
 import { DistributionDashboard } from "./components/distribution/DistributionDashboard";
 import { BlogDashboard } from "./components/blog/BlogDashboard";
+import { PublicBlogPage } from "./components/blog/PublicBlogPage";
+import { PublicBlogPostPage } from "./components/blog/PublicBlogPostPage";
 import { DriverDashboard } from "./components/drivers/DriverDashboard";
 import { BeneficiaryDashboard } from "./components/beneficiaries/BeneficiaryDashboard";
 import { MemberBeneficiarySubmission } from "./components/beneficiaries/MemberBeneficiarySubmission";
@@ -64,6 +66,14 @@ const router = createBrowserRouter([
   {
     path: "/forum/:threadId",
     element: <PublicForumThreadPage />
+  },
+  {
+    path: "/blog",
+    element: <PublicBlogPage />
+  },
+  {
+    path: "/blog/:id",
+    element: <PublicBlogPostPage />
   },
   {
     path: "/login",

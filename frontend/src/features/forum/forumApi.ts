@@ -158,6 +158,16 @@ export const forumApi = createApi({
         { type: "ForumThread", id: "LIST" },
       ],
     }),
+    deleteForumReply: builder.mutation<void, { threadId: string; replyId: string }>({
+      query: ({ threadId, replyId }) => ({
+        url: `/community/forum/${threadId}/replies/${replyId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { threadId }) => [
+        { type: "ForumReply", id: `LIST-${threadId}` },
+        { type: "ForumThread", id: "LIST" },
+      ],
+    }),
   }),
 })
 
@@ -169,4 +179,5 @@ export const {
   useCreateForumThreadMutation,
   useUpdateForumThreadMutation,
   useDeleteForumThreadMutation,
+  useDeleteForumReplyMutation,
 } = forumApi

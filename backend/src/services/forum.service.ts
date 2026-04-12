@@ -152,10 +152,11 @@ export const deleteReplyService = async (
   threadId: string,
   replyId: string,
   userId: string,
+  role: UserRole,
 ): Promise<void> => {
   const reply = await ForumReply.findOne({ _id: replyId, thread: threadId });
   if (!reply) throw new AppError(HTTP_STATUS.NOT_FOUND, 'Reply not found');
-  if (reply.author.toString() !== userId) {
+  if (role !== 'admin' && reply.author.toString() !== userId) {
     throw new AppError(HTTP_STATUS.FORBIDDEN, 'You can only delete your own replies');
   }
 

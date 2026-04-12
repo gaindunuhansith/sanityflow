@@ -31,6 +31,10 @@ const envSchema = z.object({
     BLOG_IMAGE_MAX_MB: z.coerce.number().positive().default(5),
     BLOG_IMAGE_MAX_WIDTH: z.coerce.number().int().positive().default(1600),
     BLOG_IMAGE_WEBP_QUALITY: z.coerce.number().int().min(1).max(100).default(80),
+
+    LOGTAIL_SOURCE_TOKEN: z.string().min(1).optional(),
+    SENTRY_DSN: z.string().url().optional(),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.2),
 })
 
 const parseEnv = () => {

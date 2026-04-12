@@ -6,7 +6,7 @@ export const getDefaultDashboardPath = (role: UserRole): string => {
   }
 
   if (role === 'driver') {
-    return '/dashboard/drivers';
+    return '/dashboard/distributions';
   }
 
   return '/dashboard';
@@ -20,7 +20,7 @@ export const isPathAllowedForRole = (path: string, role: UserRole): boolean => {
   if (role === 'driver') {
     return (
       path === '/dashboard' ||
-      path.startsWith('/dashboard/drivers') ||
+      path.startsWith('/dashboard/distributions') ||
       path.startsWith('/dashboard/profile')
     );
   }

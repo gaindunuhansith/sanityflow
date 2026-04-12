@@ -17,6 +17,7 @@ import {
   type ForumThreadStatus,
   useCreateForumReplyMutation,
   useCreateForumThreadMutation,
+  useDeleteForumReplyMutation,
   useDeleteForumThreadMutation,
   useGetForumRepliesQuery,
   useGetForumThreadsQuery,
@@ -50,6 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 
 const getApiErrorMessage = (error: unknown) => {
   if (!error || typeof error !== "object") {
@@ -77,6 +79,7 @@ const getApiErrorMessage = (error: unknown) => {
 export function ForumDashboard() {
   const dispatch = useAppDispatch()
   const currentUserRole = useAppSelector((state) => state.auth.user?.role)
+  const currentUserId = useAppSelector((state) => state.auth.user?.id)
   const {
     expandedThreadIds,
     searchQuery,
@@ -101,6 +104,7 @@ export function ForumDashboard() {
   const [threadFormError, setThreadFormError] = useState("")
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
+  const [pendingDeleteThreadId, setPendingDeleteThreadId] = useState<string | null>(null)
   const isAdminStatusOnlyMode = currentUserRole === "admin" && Boolean(editingThreadId)
 
   const threadQueryParams = useMemo(() => {
@@ -219,10 +223,6 @@ export function ForumDashboard() {
   }
 
   const handleDeleteThread = async (threadId: string) => {
-    if (!globalThis.confirm("Are you sure you want to delete this thread?")) {
-      return
-    }
-
     try {
       await deleteThread(threadId).unwrap()
       await refetchThreads()
@@ -246,6 +246,14 @@ export function ForumDashboard() {
   }
 
   return (
+    <>
+    <ConfirmDialog
+      open={Boolean(pendingDeleteThreadId)}
+      title="Delete Thread"
+      description="Are you sure you want to delete this thread? All replies will also be removed. This cannot be undone."
+      onConfirm={() => { if (pendingDeleteThreadId) { void handleDeleteThread(pendingDeleteThreadId) } setPendingDeleteThreadId(null) }}
+      onCancel={() => setPendingDeleteThreadId(null)}
+    />
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Recent Threads</h1>
@@ -380,10 +388,6 @@ export function ForumDashboard() {
                           }`}
                         />
 
-                        <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] uppercase tracking-wide text-emerald-700">
-                          {primaryTag}
-                        </div>
-
                         <div className="flex flex-col max-w-50 sm:max-w-62.5 md:max-w-[320px]">
                           <span className={`font-semibold text-[13px] truncate pr-4 ${isExpanded ? "text-emerald-900" : "text-gray-900"}`}>
                             {thread.title}
@@ -415,22 +419,26 @@ export function ForumDashboard() {
                     </TableCell>
                     <TableCell className="text-right pr-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
-                          onClick={() => openEditThread(thread._id)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => void handleDeleteThread(thread._id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {(currentUserRole === 'admin' || currentUserId === thread.author._id) && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
+                              onClick={() => openEditThread(thread._id)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => setPendingDeleteThreadId(thread._id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -585,6 +593,7 @@ export function ForumDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }
 
@@ -609,9 +618,22 @@ function ThreadRepliesPanel({
     isError,
   } = useGetForumRepliesQuery({ threadId: thread._id, page: 1, limit: 20 })
 
+  const [deleteReply] = useDeleteForumReplyMutation()
+  const currentUserId = useAppSelector((state) => state.auth.user?.id)
+  const currentUserRole = useAppSelector((state) => state.auth.user?.role)
+  const [pendingDeleteReply, setPendingDeleteReply] = useState<{ threadId: string; replyId: string } | null>(null)
+
   const replies = repliesResult?.replies ?? []
 
   return (
+    <>
+    <ConfirmDialog
+      open={Boolean(pendingDeleteReply)}
+      title="Delete Reply"
+      description="Are you sure you want to delete this reply? This cannot be undone."
+      onConfirm={() => { if (pendingDeleteReply) { void deleteReply(pendingDeleteReply) } setPendingDeleteReply(null) }}
+      onCancel={() => setPendingDeleteReply(null)}
+    />
     <div className="border-t border-gray-100 bg-white">
       <div className="px-4 py-4 md:px-6">
         {isLoading && (
@@ -640,6 +662,7 @@ function ThreadRepliesPanel({
                   <TableHead className="text-gray-500 font-semibold text-xs py-2.5 pl-3 w-[55%]">Reply</TableHead>
                   <TableHead className="text-gray-500 font-semibold text-xs py-2.5 w-34">Author</TableHead>
                   <TableHead className="text-gray-500 font-semibold text-xs py-2.5 pr-3 text-right w-40">Posted</TableHead>
+                  <TableHead className="text-gray-500 font-semibold text-xs py-2.5 pr-3 text-right w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -666,6 +689,18 @@ function ThreadRepliesPanel({
                       </TableCell>
                       <TableCell className="py-2.5 pr-3 text-xs text-gray-500 text-right whitespace-nowrap">
                         {formattedDate} at {formattedTime}
+                      </TableCell>
+                      <TableCell className="py-2.5 pr-3 text-right">
+                        {(currentUserRole === 'admin' || currentUserId === reply.author?._id) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => setPendingDeleteReply({ threadId: thread._id, replyId: reply._id })}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   )
@@ -695,5 +730,6 @@ function ThreadRepliesPanel({
         </div>
       </div>
     </div>
+    </>
   )
 }

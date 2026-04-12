@@ -93,7 +93,8 @@ export const deleteReplyHandler = async (req: Request, res: Response, next: Next
   try {
     const { id, replyId } = replyParamSchema.parse(req.params);
     const userId = req.user.userId;
-    await deleteReplyService(id, replyId, userId);
+    const userRole = req.user.role;
+    await deleteReplyService(id, replyId, userId, userRole);
     Logger.info(`Reply deleted: ${replyId} on thread: ${id} by user: ${userId}`);
     res.status(204).send();
   } catch (error) { next(error); }

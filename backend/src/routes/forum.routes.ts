@@ -18,10 +18,10 @@ forumRouter.get('/', getAllThreadsHandler);
 forumRouter.get('/:id', getThreadByIdHandler);
 forumRouter.post('/', auth, createThreadHandler);
 forumRouter.patch('/:id', auth, updateThreadHandler);
-forumRouter.delete('/:id', auth, requireRole('admin'), deleteThreadHandler);
+forumRouter.delete('/:id', auth, deleteThreadHandler);
 
 forumRouter.get('/:id/replies', getRepliesHandler);
 forumRouter.post('/:id/replies', auth, createReplyHandler);
-forumRouter.delete('/:id/replies/:replyId', auth, requireRole('admin'), deleteReplyHandler);
+forumRouter.delete('/:id/replies/:replyId', auth, deleteReplyHandler);
 
 export default forumRouter;

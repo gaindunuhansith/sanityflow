@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { HTTP_STATUS } from '../constants/index.js';
 import env from '../config/env.js';
 import Logger from './logger.js';
+import { Sentry } from '../config/sentry.js';
 
 export class AppError extends Error {
   readonly status: number;
@@ -79,6 +80,7 @@ const errorHandler = (err: Error, req: Request, res: Response, _next: NextFuncti
   }
 
   Logger.error(`[500] Unhandled error — ${ctx}\n${err.stack ?? err.message}`);
+  Sentry.captureException(err);
   send(
     res,
     HTTP_STATUS.INTERNAL_SERVER_ERROR,

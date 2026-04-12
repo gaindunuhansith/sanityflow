@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Droplets, LogOut, User as UserIcon } from "lucide-react";
+import { Droplet, LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -62,10 +62,10 @@ export function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <Droplets className="h-8 w-8 text-emerald-600" />
-            <span className="text-xl font-bold text-gray-900">
-              Sanity<span className="text-emerald-600">Flow</span>
-            </span>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-secondary text-brand-primary shadow-sm">
+              <Droplet className="h-4 w-4" fill="currentColor" strokeWidth={1.5} />
+            </div>
+            <span className="text-xl font-bold text-brand-primary tracking-tight font-heading">SanityFlow</span>
           </Link>
 
           {/* Navigation */}

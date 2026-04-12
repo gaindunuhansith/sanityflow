@@ -37,10 +37,12 @@ export function MemberSidebar() {
   return (
     <ShadcnSidebar collapsible="icon" className="bg-[#F3F4F6] border-r-0 [--sidebar-width-icon:4.5rem]">
       <SidebarHeader className="h-15 flex flex-row items-center px-3 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:justify-center justify-start border-none">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-secondary text-brand-primary shadow-sm hover:scale-105 transition-transform">
-          <Droplet className="h-4 w-4" fill="currentColor" strokeWidth={1.5} />
-        </div>
-        <span className="text-[16px] font-bold text-brand-primary tracking-tight font-heading group-data-[collapsible=icon]:hidden whitespace-nowrap overflow-hidden transition-all duration-300 ml-2">SanityFlow</span>
+        <Link to="/" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-secondary text-brand-primary shadow-sm hover:scale-105 transition-transform">
+            <Droplet className="h-4 w-4" fill="currentColor" strokeWidth={1.5} />
+          </div>
+          <span className="text-[16px] font-bold text-brand-primary tracking-tight font-heading group-data-[collapsible=icon]:hidden whitespace-nowrap overflow-hidden transition-all duration-300">SanityFlow</span>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-3 group-data-[collapsible=icon]:px-1.5 flex flex-col mt-2">

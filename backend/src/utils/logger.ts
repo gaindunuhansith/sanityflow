@@ -1,4 +1,6 @@
 import winston from 'winston';
+import { Logtail } from '@logtail/node';
+import { LogtailTransport } from '@logtail/winston';
 import env from '../config/env.js';
 
 
@@ -34,15 +36,19 @@ const format = winston.format.combine(
     ),
 );
 
-const transports = [
+const transports: winston.transport[] = [
     new winston.transports.Console(),
     new winston.transports.File({
         filename: 'logs/error.log',
         level: 'error',
     }),
-
     new winston.transports.File({ filename: 'logs/all.log' }),
-]
+];
+
+if (env.LOGTAIL_SOURCE_TOKEN) {
+    const logtail = new Logtail(env.LOGTAIL_SOURCE_TOKEN);
+    transports.push(new LogtailTransport(logtail));
+}
 
 const Logger = winston.createLogger({
     level: level(),

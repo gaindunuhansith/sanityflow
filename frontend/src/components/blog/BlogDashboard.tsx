@@ -37,6 +37,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 
 export function BlogDashboard() {
   const dispatch = useAppDispatch()
@@ -59,6 +60,7 @@ export function BlogDashboard() {
   const [deleteBlog] = useDeleteBlogMutation()
   const [createBlog] = useCreateBlogMutation()
   const [updateBlog] = useUpdateBlogMutation()
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     title: "",
@@ -71,10 +73,6 @@ export function BlogDashboard() {
   })
 
   const handleDelete = async (id: string) => {
-    if (!globalThis.confirm("Are you sure you want to delete this blog post?")) {
-      return
-    }
-
     try {
       await deleteBlog(id).unwrap()
       await refetch()
@@ -148,6 +146,14 @@ export function BlogDashboard() {
   }
 
   return (
+    <>
+    <ConfirmDialog
+      open={Boolean(pendingDeleteId)}
+      title="Delete Blog Post"
+      description="Are you sure you want to delete this blog post? This cannot be undone."
+      onConfirm={() => { if (pendingDeleteId) { void handleDelete(pendingDeleteId) } setPendingDeleteId(null) }}
+      onCancel={() => setPendingDeleteId(null)}
+    />
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Blog Management</h1>
@@ -203,7 +209,7 @@ export function BlogDashboard() {
                     <Button variant="outline" size="icon" onClick={() => handleOpenEdit(blog._id)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="destructive" size="icon" onClick={() => void handleDelete(blog._id)}>
+                    <Button variant="destructive" size="icon" onClick={() => setPendingDeleteId(blog._id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -328,5 +334,6 @@ export function BlogDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }

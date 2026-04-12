@@ -23,7 +23,7 @@ export function PublicBlogPostPage() {
     <div className="min-h-screen bg-white font-sans">
       <Header />
 
-      <main className="mx-auto w-full max-w-[680px] px-4 py-12 sm:px-6">
+      <main className="mx-auto w-full max-w-170 px-4 py-12 sm:px-6">
         <div className="mb-8">
           <Button asChild variant="link" className="h-auto p-0 text-emerald-700 hover:text-emerald-800 font-medium">
             <Link to="/blog">← Back to Blog</Link>
@@ -53,10 +53,10 @@ export function PublicBlogPostPage() {
                   <Sparkles className="h-4 w-4" />
                   <span>AI Overview</span>
                 </div>
-                <h2 className="text-[20px] leading-[28px] text-gray-600 sm:text-[22px]">
+                <h2 className="text-[20px] leading-7 text-gray-600 sm:text-[22px]">
                   {isLoadingAiSummary
                     ? "Generating AI overview..."
-                    : aiSummaryResult?.summary || post.summary || post.content.slice(0, 200).replace(/<[^>]*>?/gm, "").trim() + "..."}
+                    : aiSummaryResult?.summary || post.summary || post.content.slice(0, 200).replaceAll(/<[^>]*>?/g, "").trim() + "..."}
                 </h2>
                 {post.tags && post.tags.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -90,8 +90,8 @@ export function PublicBlogPostPage() {
               </div>
 
               <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed font-serif prose-headings:font-sans prose-p:text-[20px] prose-p:leading-[32px]">
-                {post.content.split('\n\n').map((paragraph, index) => (
-                  <p key={index} className="mb-8">{paragraph}</p>
+                {post.content.split('\n\n').map((paragraph) => (
+                  <p key={`${paragraph.slice(0, 48)}-${paragraph.length}`} className="mb-8">{paragraph}</p>
                 ))}
               </div>
 

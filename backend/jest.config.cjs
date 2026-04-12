@@ -18,6 +18,7 @@ module.exports = {
     ],
   },
   moduleNameMapper: {
+    '^.*/config/env(?:\\.js)?$': '<rootDir>/src/tests/mocks/env.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   clearMocks: true,

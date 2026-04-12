@@ -1,0 +1,10 @@
+export default { NODE_ENV: 'development', 
+    PORT: 3000, 
+    MONGODB_URI: process.env.MONGODB_URI, 
+    JWT_SECRET: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 
+    FRONTEND_APP_ORIGIN: 'http://localhost:5173', 
+    BACKEND_APP_ORIGIN: 'http://localhost:3000', 
+    GROQ_API_KEY: 'fake_groq_key', 
+    EMAIL_API_KEY: 'fake_email_key', 
+    OPENWEATHER_API_KEY: 'fake_openweather_key', 
+    ALERT_EMAIL: 'alerts@example.com' };

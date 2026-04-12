@@ -91,6 +91,7 @@ export const sendStatusUpdateEmail = async (opts: {
 };
 
 export const sendLowStockAlertEmail = async (opts: {
+  recipientEmail?: string;
   resourceName: string;
   category: string;
   quantity: number;
@@ -106,9 +107,12 @@ export const sendLowStockAlertEmail = async (opts: {
     opts.unit,
     opts.supplierName,
   );
+  
+  const toAddress = opts.recipientEmail || env.ALERT_EMAIL;
+
   try {
-    await resend.emails.send({ from: FROM, to: env.ALERT_EMAIL, subject, html });
-    Logger.warn(`Low stock alert sent for "${opts.resourceName}" (qty: ${opts.quantity}, reorder level: ${opts.reorderLevel})`);
+    await resend.emails.send({ from: FROM, to: toAddress, subject, html });
+    Logger.warn(`Low stock alert sent for "${opts.resourceName}" to ${toAddress} (qty: ${opts.quantity}, reorder level: ${opts.reorderLevel})`);
   } catch (err) {
     Logger.error(`Failed to send low stock alert email: ${err}`);
   }

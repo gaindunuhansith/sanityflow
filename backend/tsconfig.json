@@ -11,7 +11,7 @@
     "moduleResolution": "nodenext",
     "target": "esnext",
     "lib": ["esnext"],
-    "types": ["node"],
+    "types": ["node", "jest", "supertest"],
     // and npm install -D @types/node
 
     // Other Outputs

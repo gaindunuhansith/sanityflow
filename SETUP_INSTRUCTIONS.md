@@ -58,6 +58,18 @@ sanityflow/
    EMAIL_API_KEY=<your_resend_api_key>
    ALERT_EMAIL=<your_alert_email>
    OPENWEATHER_API_KEY=<your_openweather_api_key>
+
+   # AWS S3 (Blog cover image uploads)
+   AWS_REGION=<your_aws_region>
+   AWS_S3_BUCKET=<your_s3_bucket_name>
+   AWS_ACCESS_KEY_ID=<your_aws_access_key_id>
+   AWS_SECRET_ACCESS_KEY=<your_aws_secret_access_key>
+   AWS_S3_PUBLIC_BASE_URL=<optional_custom_public_base_url>
+
+   # Blog image upload/compression config
+   BLOG_IMAGE_MAX_MB=5
+   BLOG_IMAGE_MAX_WIDTH=1600
+   BLOG_IMAGE_WEBP_QUALITY=80
    ```
 
 4. Start the development server:

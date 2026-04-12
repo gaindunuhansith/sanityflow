@@ -4,6 +4,8 @@ import type { CreateBlogPostData, UpdateBlogPostData, GetBlogPostsQuery } from '
 import { AppError } from '../utils/errorHandler.js';
 import { HTTP_STATUS } from '../constants/index.js';
 import mongoose from 'mongoose';
+import { processBlogCoverImage } from './imageProcessing.service.js';
+import { deleteObjectFromS3, resolveBlogCoverImageUrl, uploadBlogImageToS3 } from './s3Upload.service.js';
 
 export interface PaginatedBlogPosts {
   posts: IBlogPost[];
@@ -12,6 +14,18 @@ export interface PaginatedBlogPosts {
   limit: number;
   totalPages: number;
 }
+
+const enrichBlogImageUrl = async (post: IBlogPost): Promise<IBlogPost> => {
+  const resolvedCoverImage = await resolveBlogCoverImageUrl(post.coverImage, post.coverImageKey);
+
+  if (resolvedCoverImage) {
+    post.coverImage = resolvedCoverImage;
+  } else {
+    post.set('coverImage', undefined, { strict: false });
+  }
+
+  return post;
+};
 
 const toSlug = (value: string): string => {
   return value
@@ -69,8 +83,10 @@ export const getAllBlogPostsService = async (query: GetBlogPostsQuery): Promise<
     BlogPost.countDocuments(filter),
   ]);
 
+  const enrichedPosts = await Promise.all(posts.map((post) => enrichBlogImageUrl(post)));
+
   return {
-    posts,
+    posts: enrichedPosts,
     total,
     page,
     limit,
@@ -83,45 +99,106 @@ export const getBlogPostByIdService = async (id: string): Promise<IBlogPost> => 
   if (!post) {
     throw new AppError(HTTP_STATUS.NOT_FOUND, 'Blog post not found');
   }
-  return post;
+  return await enrichBlogImageUrl(post);
 };
 
-export const createBlogPostService = async (data: CreateBlogPostData): Promise<IBlogPost> => {
+export const createBlogPostService = async (data: CreateBlogPostData, coverImageFile?: Express.Multer.File): Promise<IBlogPost> => {
   const slug = await buildUniqueSlug(data.title);
-  const post = new BlogPost({ ...data, slug });
+  let uploadedCoverImage: { key: string; url: string } | undefined;
+
+  if (coverImageFile) {
+    const processedImage = await processBlogCoverImage(coverImageFile.buffer);
+    uploadedCoverImage = await uploadBlogImageToS3({
+      buffer: processedImage.buffer,
+      contentType: processedImage.contentType,
+      fileNameSeed: slug,
+    });
+  }
+
+  const post = new BlogPost({
+    ...data,
+    slug,
+    ...(uploadedCoverImage ? { coverImage: uploadedCoverImage.url, coverImageKey: uploadedCoverImage.key } : {}),
+  });
+
   if (data.status === 'Published' && !post.publishedAt) {
     post.publishedAt = new Date();
   }
-  return await post.save();
+
+  try {
+    const saved = await post.save();
+    return await enrichBlogImageUrl(saved);
+  } catch (error) {
+    if (uploadedCoverImage) {
+      await deleteObjectFromS3(uploadedCoverImage.key).catch(() => undefined);
+    }
+    throw error;
+  }
 };
 
-export const updateBlogPostService = async (id: string, data: UpdateBlogPostData): Promise<IBlogPost> => {
+export const updateBlogPostService = async (id: string, data: UpdateBlogPostData, coverImageFile?: Express.Multer.File): Promise<IBlogPost> => {
+  const existingPost = await BlogPost.findById(id);
+  if (!existingPost) {
+    throw new AppError(HTTP_STATUS.NOT_FOUND, 'Blog post not found');
+  }
+
   const updatePayload: Record<string, unknown> = { ...data };
+  let newlyUploadedImage: { key: string; url: string } | undefined;
 
   if (typeof data.title === 'string' && data.title.trim().length > 0) {
     updatePayload.slug = await buildUniqueSlug(data.title, id);
+  }
+
+  if (coverImageFile) {
+    const processedImage = await processBlogCoverImage(coverImageFile.buffer);
+    const fileNameSeed = typeof updatePayload.slug === 'string' ? updatePayload.slug : existingPost.slug;
+
+    const uploadedImage = await uploadBlogImageToS3({
+      buffer: processedImage.buffer,
+      contentType: processedImage.contentType,
+      fileNameSeed,
+    });
+
+    newlyUploadedImage = uploadedImage;
+    updatePayload.coverImage = uploadedImage.url;
+    updatePayload.coverImageKey = uploadedImage.key;
   }
 
   if (data.status === 'Published') {
     updatePayload.publishedAt = new Date();
   }
 
-  const post = await BlogPost.findByIdAndUpdate(
-    id,
-    { $set: updatePayload },
-    { new: true, runValidators: true },
-  );
+  try {
+    const post = await BlogPost.findByIdAndUpdate(
+      id,
+      { $set: updatePayload },
+      { new: true, runValidators: true },
+    );
 
-  if (!post) {
-    throw new AppError(HTTP_STATUS.NOT_FOUND, 'Blog post not found');
+    if (!post) {
+      throw new AppError(HTTP_STATUS.NOT_FOUND, 'Blog post not found');
+    }
+
+    if (newlyUploadedImage && existingPost.coverImageKey && existingPost.coverImageKey !== newlyUploadedImage.key) {
+      await deleteObjectFromS3(existingPost.coverImageKey).catch(() => undefined);
+    }
+
+    return await enrichBlogImageUrl(post);
+  } catch (error) {
+    if (newlyUploadedImage) {
+      await deleteObjectFromS3(newlyUploadedImage.key).catch(() => undefined);
+    }
+    throw error;
   }
-
-  return post;
 };
 
 export const deleteBlogPostService = async (id: string): Promise<void> => {
   const post = await BlogPost.findByIdAndDelete(id);
   if (!post) {
     throw new AppError(HTTP_STATUS.NOT_FOUND, 'Blog post not found');
+  }
+
+  if (post.coverImageKey) {
+    await deleteObjectFromS3(post.coverImageKey).catch(() => undefined);
   }
 };

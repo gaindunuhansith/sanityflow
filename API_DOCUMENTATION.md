@@ -89,6 +89,25 @@ Base URL: `http://localhost:3000/api/v1`
 | PATCH  | `/blog/:id`   | Yes  | Admin   | Update a blog post  |
 | DELETE | `/blog/:id`   | Yes  | Admin   | Delete a blog post  |
 
+### Blog Image Upload (S3)
+
+`POST /blog` and `PATCH /blog/:id` now accept `multipart/form-data` for cover image uploads.
+
+- File field name: `coverImage`
+- Allowed formats: `image/jpeg`, `image/png`, `image/webp`
+- Max file size: `5MB` (configurable via `BLOG_IMAGE_MAX_MB`)
+- Compression pipeline: WebP conversion, max width `1600px`, quality `80` (configurable)
+
+Text fields should still be provided in the same request body (`title`, `summary`, `content`, `tags`, `status`).
+
+When upload succeeds:
+- The optimized image is stored in S3.
+- The returned public URL is stored in `coverImage` on the blog document.
+- The S3 object key is stored in `coverImageKey` for cleanup.
+
+On `PATCH /blog/:id` with a new `coverImage` file, the previous S3 object is deleted after successful DB update.
+On `DELETE /blog/:id`, the related S3 object is also deleted.
+
 ## Community Forum
 
 | Method | Endpoint                                 | Auth | Role  | Description    |

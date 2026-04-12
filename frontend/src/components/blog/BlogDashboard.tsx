@@ -66,6 +66,8 @@ export function BlogDashboard() {
     content: "",
     tags: "",
     status: "Draft" as BlogPostStatus,
+    coverImageFile: null as File | null,
+    currentCoverImageUrl: "",
   })
 
   const handleDelete = async (id: string) => {
@@ -82,12 +84,15 @@ export function BlogDashboard() {
   }
 
   const handleSave = async () => {
-    const payload = {
-      title: formData.title,
-      summary: formData.summary,
-      content: formData.content,
-      tags: formData.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      status: formData.status,
+    const payload = new FormData()
+    payload.append("title", formData.title)
+    payload.append("summary", formData.summary)
+    payload.append("content", formData.content)
+    payload.append("tags", formData.tags)
+    payload.append("status", formData.status)
+
+    if (formData.coverImageFile) {
+      payload.append("coverImage", formData.coverImageFile)
     }
 
     try {
@@ -115,6 +120,8 @@ export function BlogDashboard() {
       content: "",
       tags: "",
       status: "Draft",
+      coverImageFile: null,
+      currentCoverImageUrl: "",
     })
     dispatch(setEditingBlogPostId(null))
     dispatch(setCreateBlogModalOpen(true))
@@ -133,6 +140,8 @@ export function BlogDashboard() {
       content: blogToEdit.content,
       tags: blogToEdit.tags.join(", "),
       status: blogToEdit.status,
+      coverImageFile: null,
+      currentCoverImageUrl: blogToEdit.coverImage || "",
     })
     dispatch(setEditingBlogPostId(postId))
     dispatch(setCreateBlogModalOpen(false))
@@ -261,6 +270,27 @@ export function BlogDashboard() {
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 placeholder="Enter blog post content..."
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="coverImage">Cover Image</Label>
+              <Input
+                id="coverImage"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => {
+                  const nextFile = event.target.files?.[0] ?? null
+                  setFormData({
+                    ...formData,
+                    coverImageFile: nextFile,
+                  })
+                }}
+              />
+              {formData.currentCoverImageUrl && !formData.coverImageFile ? (
+                <p className="text-xs text-muted-foreground">Current image will be kept unless you select a new file.</p>
+              ) : null}
+              {formData.coverImageFile ? (
+                <p className="text-xs text-muted-foreground">Selected file: {formData.coverImageFile.name}</p>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
